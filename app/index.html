@@ -55,6 +55,7 @@ body{background:radial-gradient(1100px 600px at 25% -10%,var(--glow,transparent)
 .deck .cv.big{width:100%;height:auto;aspect-ratio:1;max-width:200px;align-self:center;font-size:64px}.dlabel{font-weight:800;color:var(--ac)}
 .deck label{display:flex;gap:8px;align-items:center;color:var(--mu);font-size:13px}.deck .btns{justify-content:center}.deck .pp{width:48px;height:48px;border-radius:50%;background:var(--ac);color:#fff}
 .xfader{display:flex;gap:12px;align-items:center;max-width:520px;margin:8px auto}.xfader input{flex:1;height:28px}
+.trans{display:grid;grid-template-columns:40px 1fr auto;gap:10px;align-items:center;padding:8px;border-radius:10px;background:var(--card);margin-bottom:6px}.trans .cv{width:40px;height:40px}.trans .tt{min-width:0}.tog.on{color:var(--ac)}
 .crate{display:grid;grid-template-columns:40px 1fr auto auto;gap:10px;align-items:center;padding:6px 8px;border-radius:8px}.crate:hover{background:var(--hov)}.crate .cv{width:40px;height:40px}.crate .tt{min-width:0}
 #ytwrap.dj{display:grid;grid-template-columns:1fr 1fr;gap:6px;aspect-ratio:auto;min-height:0;background:none}#ytwrap.dj iframe{position:static;aspect-ratio:16/9;height:auto}
 @media(max-width:760px){.djgrid{grid-template-columns:1fr}}
@@ -140,12 +141,18 @@ function showYT(){const on=decks.some(d=>d.isYT);$('#ytwrap').classList.toggle('
  decks.forEach(d=>{const f=$('#yt'+d.i);if(f)f.style.zIndex=d===D()?2:1})}
 async function load(t,back){if(!t)return;if(cur&&!back)hist.push(cur);cur=t;endedFor=null;mixing=false;clearInterval(fadeT);
  dStop(decks[1-A]);render();setMeta();const ok=await dStart(D(),t,V());if(cur!==t)return;showYT();if(!ok)renderBar()}
-// DJ transition: start the next song on the other deck and crossfade over xf seconds
-async function mixTo(t){const from=D(),to=decks[1-A],prevCur=cur;mixing=true;hist.push(cur);cur=t;endedFor=null;render();setMeta();
- const ok=await dStart(to,t,0);if(cur!==t)return;
- if(!ok){mixing=false;cur=prevCur;hist.pop();endedFor=cur;render();return} // unplayable: let the current song finish, then move on
- A=to.i;showYT();const steps=xf*10;let k=0;clearInterval(fadeT);
- fadeT=setInterval(()=>{k++;const f=k/steps;dVol(to,V()*f);dVol(from,V()*(1-f));if(k>=steps){clearInterval(fadeT);dStop(from);mixing=false;showYT();renderBar()}},100)}
+// transition curves → [outgoing gain, incoming gain]. suave: equal-power blend (no volume dip in the middle);
+// palabra: the incoming voice comes in fast while the outgoing tail fades; corte: clean cut on the phrase boundary
+const curves={suave:f=>[Math.cos(f*Math.PI/2),Math.sin(f*Math.PI/2)],palabra:f=>[Math.cos(f*Math.PI/2),Math.min(1,f*3)],corte:f=>f<.5?[1,0]:[0,1]};
+// DJ transition: preload the next song silently on the other deck so it is at plan.bStart exactly when the outgoing song reaches plan.at, then fade
+async function mixTo(t,plan){const from=D(),to=decks[1-A],prevCur=cur;mixing=true;
+ const ok=await dStart(to,t,0);if(!ok||!mixing){if(!ok){mixing=false;endedFor=cur}return} // unplayable: let the current song finish
+ for(let k=0;k<30&&!dPlaying(to);k++)await new Promise(r=>setTimeout(r,100));
+ dSeek(to,Math.max(0,plan.bStart-Math.max(0,plan.at-dPos(from))));
+ while(mixing&&dPlaying(from)&&dPos(from)<plan.at)await new Promise(r=>setTimeout(r,50));if(!mixing)return;
+ hist.push(prevCur);cur=t;endedFor=null;A=to.i;render();setMeta();showYT();
+ const steps=Math.max(1,Math.round(plan.len*20)),curve=curves[plan.style]||curves.suave;let k=0;clearInterval(fadeT);
+ fadeT=setInterval(()=>{k++;const [ga,gb]=curve(Math.min(1,k/steps));dVol(from,V()*ga);dVol(to,V()*gb);if(k>=steps){clearInterval(fadeT);dStop(from);mixing=false;showYT();renderBar()}},50)}
 const playing=()=>dPlaying(D()),pos=()=>dPos(D()),dur=()=>dDur(D());
 function seek(s){const d=D();d.isYT?d.ready&&d.yt.seekTo(s,true):(d.a.currentTime=s)}
 function pauseAll(){decks.forEach(d=>{d.a.pause();if(d.ready&&d.isYT)d.yt.pauseVideo()})}
@@ -170,7 +177,8 @@ $('#npBtn').onclick=()=>{$('#app').classList.toggle('np');renderNP()};
 // YouTube sometimes pauses on the last frame instead of reporting "ended", so the end is also detected by position.
 setInterval(()=>{const d=D(),du=dDur(d),p=dPos(d);$('#t').textContent=fmt(p);$('#d').textContent=fmt(du);if(du&&!seeking)$('#seek').value=p/du*1000;
  if(!cur||mixing||djMode||endedFor===cur)return;
- if(xf&&repeat!==2&&dPlaying(d)&&du>xf+5&&p>=du-xf){const t=advance();if(t)mixTo(t);else endedFor=cur;return}
+ const sp=setPlan(),plan=sp?{...sp,at:Math.min(du-1,sp.at<0?du+sp.at:sp.at)}:xf&&du>xf+5?{at:du-xf,bStart:0,len:xf,style:'suave'}:null;
+ if(plan&&du>0&&repeat!==2&&dPlaying(d)&&p>=plan.at-3){const t=advance();if(t)mixTo(t,plan);else endedFor=cur;return}
  if(d.isYT&&d.ready){const s=d.yt.getPlayerState();if(s===0||(du>1&&p>=du-1&&s!==1&&s!==3)){endedFor=cur;ended()}}},500);
 if('mediaSession'in navigator){const m=navigator.mediaSession;m.setActionHandler('nexttrack',next);m.setActionHandler('previoustrack',prev);m.setActionHandler('play',toggle);m.setActionHandler('pause',toggle)}
 
@@ -372,11 +380,11 @@ function render(){renderSide();renderMain();renderBar();renderNP()}
 // ---- lyrics: fetched while a song plays from LRCLIB (free, open lyrics database, no key), synced line by line when available
 let lyrOn=false,lyrFor=null,lyrLines=[],lyrIdx=-1;const lyrCache={};
 const parseLrc=s=>s.split('\n').map(l=>{const m=l.match(/^\[(\d+):(\d+(?:\.\d+)?)\]\s*(.*)$/);return m&&{t:+m[1]*60+(+m[2]),x:m[3]}}).filter(x=>x&&x.x);
-async function getLyrics(t){const k=artKey(t);if(k in lyrCache)return lyrCache[k];let res=null;
+async function getLyrics(t,dd){const k=artKey(t);if(k in lyrCache)return lyrCache[k];let res=null;
  try{const title=t.title.replace(/\s*[(\[].*?[)\]]/g,'').replace(/ - .*$/,'').trim(),artist=(t.artist||'').split(', ')[0];
   let s=await (await fetch('https://lrclib.net/api/search?'+new URLSearchParams({track_name:title,artist_name:artist}))).json();
   if(!s.length)s=await (await fetch('https://lrclib.net/api/search?q='+encodeURIComponent(artist+' '+title))).json();
-  const d=dur(),j=s.sort((a,b)=>(!!b.syncedLyrics-!!a.syncedLyrics)||(d?Math.abs(a.duration-d)-Math.abs(b.duration-d):0))[0];
+  const d=dd||dur(),j=s.sort((a,b)=>(!!b.syncedLyrics-!!a.syncedLyrics)||(d?Math.abs(a.duration-d)-Math.abs(b.duration-d):0))[0];
   if(j)res={synced:j.syncedLyrics?parseLrc(j.syncedLyrics):null,plain:j.plainLyrics||'',instrumental:j.instrumental}}catch(e){return null}
  lyrCache[k]=res;return res}
 async function showLyrics(){const L=$('#lyr');L.style.bottom=($('#bar').offsetHeight+($('#mnav').offsetHeight||0))+'px';
@@ -403,16 +411,16 @@ function djApply(){const g=[Math.cos(djX*Math.PI/2),Math.sin(djX*Math.PI/2)];dec
 function enterDj(crate){djMode=true;mixing=false;clearInterval(fadeT);if(crate)djCrate=crate;djX=A?1:0;djApply();$('#ytwrap').classList.add('dj')}
 // leaving the DJ view: the deck the crossfader favours keeps playing as the normal player, the other one stops
 function exitDj(){djMode=false;clearInterval(djAutoT);$('#ytwrap').classList.remove('dj');const keep=decks[A],other=decks[1-A];if(other.t)dStop(other);dVol(keep,V());cur=keep.t||cur;showYT()}
-async function djLoad(i,t){const d=decks[i];if(!t)return;notice('Cargando en el plato '+'AB'[i]+'…');const ok=await dStart(d,t,0);if(!ok)return renderDj();
+async function djLoad(i,t){const d=decks[i];if(!t)return;if(!djMode)enterDj();d.loop=null;d.cue=0;d.bpm=0;analyze(t).then(a=>{if(d.t===t){d.bpm=a.bpm;renderDj()}});notice('Cargando en el plato '+'AB'[i]+'…');const ok=await dStart(d,t,0);if(!ok)return renderDj();
  for(let k=0;k<20&&!dPlaying(d);k++)await new Promise(r=>setTimeout(r,150)); // wait until it really starts, then park it at the beginning
  dPause(d);dSeek(d,0);if(d.rate)dRate(d,d.rate);if(!cur||!decks[A].t){A=i;cur=t}djApply();showYT();$('#ytwrap').classList.add('dj');renderDj();renderBar()}
 function djAuto(){const to=djX<.5?1:0,d=decks[to];if(!d.t)return notice('Carga una canción en el plato '+'AB'[to]);if(!dPlaying(d))dPlay(d);
  const from=djX,steps=(xf||6)*10;let k=0;clearInterval(djAutoT);
  djAutoT=setInterval(()=>{k++;djX=from+(to-from)*k/steps;const x=$('#xfd');if(x)x.value=djX;djApply();if(k>=steps){clearInterval(djAutoT);dPause(decks[1-to])}},100)}
-const djDeckHtml=d=>{const t=d.t,L='AB'[d.i];return `<div class="deck" data-deck="${d.i}"><div class="dlabel">Plato ${L}</div>${t?tcover(t,1):cover(L,1)}
+const djDeckHtml=d=>{const t=d.t,L='AB'[d.i];return `<div class="deck" data-deck="${d.i}"><div class="dlabel">Plato ${L}${d.bpm?' · '+d.bpm+' BPM':''}</div>${t?tcover(t,1):cover(L,1)}
  <b>${esc(t?t.title:'Vacío')}</b><small style="color:var(--mu)">${esc(t?t.artist||'Tu archivo':'Carga una canción desde la lista de abajo')}</small>
  <div class="prog"><span class="dt">0:00</span><input class="dseek" type="range" min="0" max="1000" value="0" aria-label="Posición del plato ${L}"><span class="dd">0:00</span></div>
- <div class="btns"><button data-dk="cue" title="Volver al principio (cue)">⏮</button><button class="pp" data-dk="play" title="Reproducir o pausar el plato ${L}">▶</button></div>
+ <div class="btns"><button data-dk="cue" title="Ir al punto cue (o al principio)">⏮</button><button class="pp" data-dk="play" title="Reproducir o pausar el plato ${L}">▶</button><button data-dk="setcue" title="Marcar el punto cue aquí">📍</button><button data-dk="loop" class="tog${d.loop?' on':''}" title="Repetir 8 tiempos desde aquí">🔁 8</button></div>
  <label>Volumen <input class="dvol" type="range" min="0" max="1" step="0.01" value="${djGain[d.i]}"></label>
  <label>Velocidad <select class="drate">${[0.75,1,1.25,1.5].map(r=>`<option value="${r}"${r===(d.rate||1)?' selected':''}>${r}×</option>`).join('')}</select></label></div>`};
 function djCrateHtml(){const q=norm(view.cq||''),base=djCrate||(ctx.length?ctx:allTracks());
@@ -422,6 +430,8 @@ function renderDj(){if(view.v!=='dj')return;$('#main').innerHTML=`<h1>🎧 Modo 
  <div class="djgrid">${decks.map(djDeckHtml).join('')}</div>
  <div class="xfader"><b>A</b><input id="xfd" type="range" min="0" max="1" step="0.01" value="${djX}" aria-label="Crossfader"><b>B</b></div>
  <div class="tools" style="justify-content:center"><button class="pri" data-dk="auto">⇄ Pasar al otro plato en ${xf||6} s</button></div>
+ <h2>🎛️ Set DJ automático</h2><p style="color:var(--mu)">Onda ordena las canciones por palabras que se repiten (y por ritmo cuando hay datos de BPM) y planifica cada transición con los tiempos de la letra: puente de palabra si comparten una, la intro de una bajo el final instrumental de la otra, o corte limpio al acabar la última frase. Si tienes canciones en los platos A y B, esa será la primera transición. Las canciones suenan enteras.</p>
+ <div class="tools"><button data-dk="mkset">${djSet?'↻ Crear otro set':'Crear set con 5 transiciones'}</button></div><div id="setBox">${setHtml()}</div>
  <h2>Canciones para pinchar</h2><form id="cf" class="sbox"><input id="cq" placeholder="Busca en tu música; pulsa Buscar para canciones nuevas" value="${esc(view.cq||'')}"><button class="pri">Buscar</button></form>
  <div id="crate" style="margin-top:10px">${djCrateHtml()}</div>`;
  const cq=$('#cq');cq.oninput=()=>{view.cq=cq.value;view.cweb=null;$('#crate').innerHTML=djCrateHtml();observeArt()};
@@ -433,11 +443,51 @@ setInterval(()=>{if(view.v!=='dj')return;document.querySelectorAll('.deck').forE
  el.querySelector('.dt').textContent=fmt(p);el.querySelector('.dd').textContent=fmt(du);if(du&&document.activeElement!==s)s.value=p/du*1000;
  el.querySelector('.pp').textContent=dPlaying(d)?'⏸':'▶';el.classList.toggle('live',dPlaying(d))})},300);
 
+// ---- DJ set: songs ordered by rhythm and shared words, each transition planned from BPM (Deezer) and lyric-line times (LRCLIB).
+// shortcut: timings come from the album release; a YouTube video with an extra intro shifts them, until we can analyse the real audio.
+let djSet=null;const anaCache={};
+async function analyze(t){const k=artKey(t);if(anaCache[k])return anaCache[k];let bpm=0,du=0;
+ try{const s=await jsonp('https://api.deezer.com/search?limit=1&q='+encodeURIComponent(artQuery(t))),x=s&&s.data&&s.data[0];
+  if(x){du=x.duration;const d=await jsonp('https://api.deezer.com/track/'+(+x.id)+'?x=1');bpm=Math.round(d&&d.bpm||0)}}catch(e){}
+ const ly=await getLyrics(t,du);return anaCache[k]={bpm,dur:du,lines:ly&&ly.synced||[]}}
+const STOP=new Set('para pero porque como cuando donde esta este esto todo toda todos nada solo tengo tiene quiero quieres sabes eres estoy estas vamos with that this your what when have from just like they there'.split(' '));
+const words=s=>(s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').match(/[a-zñ]{4,}/g)||[]).filter(w=>!STOP.has(w));
+// a word from a's last two sung lines that b sings in its first 20 s
+function sharedWord(a,b){const tail=a.lines.slice(-2),head=b.lines.filter(l=>l.t<=20);
+ for(const la of [...tail].reverse())for(const w of words(la.x)){const lb=head.find(l=>words(l.x).includes(w));if(lb)return{w,la,lb}}return null}
+// every song plays whole: b always starts from 0 at `at`; its intro sounds under a's ending and the fade lasts `len`
+function planPair(a,b){const bVoice=b.lines.length?b.lines[0].t:8,ov=Math.min(12,Math.max(2,bVoice-.5)),aEnd=a.dur||0;
+ if(!aEnd)return{at:-ov-1,bStart:0,len:ov,style:'suave',why:'el final de una se funde con el inicio de la otra'};
+ const sw=sharedWord(a,b);
+ if(sw){const nx=a.lines[a.lines.indexOf(sw.la)+1],laEnd=Math.min(aEnd,nx?nx.t:sw.la.t+3),at=laEnd-sw.lb.t+.3; // b sings the word right after a does
+  if(at>aEnd*.6&&at<aEnd-1)return{at,bStart:0,len:Math.min(6,Math.max(1.5,sw.lb.t)),style:'suave',why:'puente de palabra: «'+sw.w+'» suena al final de una y al empezar la otra'}}
+ const last=a.lines[a.lines.length-1],aVoiceEnd=last?Math.min(aEnd,last.t+4):aEnd-ov,room=aEnd-aVoiceEnd;
+ if(room>=3){const len=Math.min(ov,room);return{at:aEnd-len,bStart:0,len,style:'suave',why:'el final instrumental de una se funde con la intro de la otra ('+Math.round(len)+' s)'}}
+ return{at:Math.max(aVoiceEnd,aEnd-2),bStart:0,len:.6,style:'corte',why:'corte limpio justo al acabar la última frase'}}
+// greedy order: after each song, the candidate with the closest BPM, with a bonus for a shared word
+async function buildSet(list,n,pre){const order=[...pre],rest=list.filter(t=>!order.includes(t));if(!order.length&&rest.length)order.push(rest.shift());
+ while(order.length<n&&rest.length){const la=await analyze(order[order.length-1]);let best=rest[0],bs=-1;
+  for(const t of rest.slice(0,12)){const b=await analyze(t),s=(la.bpm&&b.bpm?Math.max(0,20-Math.abs(la.bpm-b.bpm)):5)+(sharedWord(la,b)?15:0);if(s>bs){bs=s;best=t}}
+  order.push(best);rest.splice(rest.indexOf(best),1)}
+ const plans=[];for(let i=0;i<order.length-1;i++)plans.push(planPair(await analyze(order[i]),await analyze(order[i+1])));return{tracks:order,plans}}
+async function makeSet(){const crate=djCrate||(ctx.length?ctx:allTracks()),pre=decks.map(d=>d.t).filter(Boolean);const box=$('#setBox');
+ if(box)box.innerHTML='<div class="empty">Analizando ritmos y letras… (unos segundos)</div>';djSet=await buildSet(crate,6,pre);renderDj()}
+const setPlan=()=>djSet&&!djMode&&ctx.length===djSet.tracks.length&&ctx[idx]===cur&&djSet.tracks[idx]===cur?djSet.plans[idx]:null;
+// play the set with whole songs; preview = jump to 12 s before transition i
+async function playSet(i,preview){if(!djSet)return;if(djMode){djMode=false;clearInterval(djAutoT);$('#ytwrap').classList.remove('dj')}shuffle=false;repeat=0;
+ playFrom(djSet.tracks,i);if(!preview)return renderBar();const d=D();for(let k=0;k<50&&!dPlaying(d);k++)await new Promise(r=>setTimeout(r,150));
+ const p=djSet.plans[i],du=dDur(d);seek(Math.max(0,(p.at<0?du+p.at:Math.min(p.at,du-1))-12));renderBar()}
+const setHtml=()=>djSet?`<div class="tools"><button class="pri" data-dk="playset">▶ Reproducir el set completo</button></div>`+djSet.plans.map((p,i)=>`<div class="trans">${tcover(djSet.tracks[i])}<div class="tt"><b>${i+1}. ${esc(djSet.tracks[i].title)} → ${esc(djSet.tracks[i+1].title)}</b><small>${esc(p.why)}</small></div><button data-dk="pv" data-pv="${i}">▶ Escuchar</button></div>`).join(''):'';
+setInterval(()=>decks.forEach(d=>{if(d.loop&&d.t&&dPlaying(d)&&dPos(d)>=d.loop.e)dSeek(d,d.loop.s)}),100);
+
 // ---- one click handler for everything with data-*
 document.addEventListener('click',async e=>{
  const dk=e.target.closest('[data-dk],[data-load]');if(dk&&view.v==='dj'){const box=dk.closest('.deck'),d=box&&decks[+box.dataset.deck];
   if(dk.dataset.load!==undefined)return djLoad(+dk.dataset.load,djList[+dk.dataset.ci]);if(dk.dataset.dk==='auto')return djAuto();
-  if(d&&d.t){if(dk.dataset.dk==='play')dPlaying(d)?dPause(d):dPlay(d);else if(dk.dataset.dk==='cue')dSeek(d,0)}return}
+  const k=dk.dataset.dk;if(k==='mkset')return makeSet();if(k==='playset')return playSet(0);if(k==='pv')return playSet(+dk.dataset.pv,true);
+  if(d&&d.t){if(k==='play')dPlaying(d)?dPause(d):dPlay(d);else if(k==='cue')dSeek(d,d.cue||0);
+   else if(k==='setcue'){d.cue=dPos(d);notice('Cue del plato '+'AB'[d.i]+' en '+fmt(d.cue))}
+   else if(k==='loop'){d.loop=d.loop?null:{s:dPos(d),e:dPos(d)+8*60/(d.bpm||100)};renderDj()}}return}
  const el=e.target.closest('[data-go],[data-play],[data-a],[data-pl],[data-art],[data-mix],[data-qrm],[data-alb],[data-artid],.tr');if(!el||e.target.closest('dialog'))return;
  if(el.dataset.qrm!==undefined){queue.splice(+el.dataset.qrm,1);return renderNP()}
  if(el.dataset.alb)return go({v:'album',id:+el.dataset.alb});
