@@ -175,7 +175,9 @@ setInterval(()=>{const d=D(),du=dDur(d),p=dPos(d);$('#t').textContent=fmt(p);$('
 if('mediaSession'in navigator){const m=navigator.mediaSession;m.setActionHandler('nexttrack',next);m.setActionHandler('previoustrack',prev);m.setActionHandler('play',toggle);m.setActionHandler('pause',toggle)}
 
 // ---- covers: album art from the iTunes Search API (free, no key), YouTube thumbnail as fallback; cached forever
-let art=store.get('ondaArt',{}),artQ=[],artBusy=false;const region=((navigator.language||'').split('-')[1]||'US').toUpperCase();
+let art=store.get('ondaArt',{}),artAlb=store.get('ondaAlb',{}),artQ=[],artBusy=false;
+// covers that the old iTunes-only lookup couldn't find get one more try with Deezer
+if(store.get('ondaArtV',1)<2){for(const k in art)if(!art[k])delete art[k];store.set('ondaArt',art);store.set('ondaArtV',2)}const region=((navigator.language||'').split('-')[1]||'US').toUpperCase();
 const safeUrl=u=>typeof u==='string'&&/^https:\/\/[\w.\/%-]+$/.test(u)?u:null,big=u=>u.replace('100x100bb','300x300bb');
 const artKey=t=>norm(key(t)),artQuery=t=>((t.artist||'').split(', ')[0]+' '+t.title.replace(/\s*[(\[].*?[)\]]/g,'').replace(/ - .*$/,'')).trim();
 const artUrl=t=>{const v=art[artKey(t)];if(v)return v;const id=t.ytId||(ytCache[key(t)]||[])[0];return id&&/^[\w-]{11}$/.test(id)?'https://i.ytimg.com/vi/'+id+'/mqdefault.jpg':null};
@@ -187,18 +189,27 @@ const imgCover=(u,label,bg)=>(u=safeUrl(u))?`<div class="cv${bg?' big':''}" styl
 const io=new IntersectionObserver(es=>es.forEach(e=>{if(!e.isIntersecting)return;io.unobserve(e.target);const k=e.target.dataset.ak;
  if(art[k]===undefined&&!artQ.some(x=>x.k===k)){artQ.push({k,q:e.target.dataset.q});pumpArt()}}));
 function observeArt(){document.querySelectorAll('[data-ak]').forEach(el=>io.observe(el))}
-// shortcut: iTunes allows ~20 searches/min, so new covers arrive one every 3 s; each is cached after the first time.
+// Deezer's public API has no CORS headers, only JSONP; it's free, needs no key and allows ~10 searches/s.
+let jpN=0;const jsonp=url=>new Promise((res,rej)=>{const cb='__dz'+(++jpN),s=document.createElement('script');
+ const done=(v,err)=>{delete window[cb];s.remove();clearTimeout(to);err?rej(err):res(v)},to=setTimeout(()=>done(null,'timeout'),8000);
+ window[cb]=d=>done(d);s.onerror=()=>done(null,'net');s.src=url+'&output=jsonp&callback='+cb;document.head.appendChild(s)});
+// album art for a song: Deezer first (fast), iTunes as fallback. null = not found anywhere, undefined = offline (try again later)
+async function findArt(q){let failed=0;
+ try{const d=await jsonp('https://api.deezer.com/search?limit=1&q='+encodeURIComponent(q)),x=d&&d.data&&d.data[0],u=x&&safeUrl(x.album&&x.album.cover_medium);if(u)return{u,alb:'dz'+x.album.id}}catch(e){failed++}
+ try{const j=await (await fetch('https://itunes.apple.com/search?entity=song&limit=1&country='+region+'&term='+encodeURIComponent(q))).json(),x=j.results&&j.results[0],u=safeUrl(x&&x.artworkUrl100);if(u)return{u:big(u),alb:'it'+x.collectionId}}catch(e){failed++}
+ return failed===2?undefined:null}
+const prefetch=tracks=>{tracks.forEach(t=>{const k=artKey(t);if(art[k]===undefined&&!artQ.some(x=>x.k===k))artQ.push({k,q:artQuery(t)})});pumpArt()};
+const prefetchLists=()=>pls.forEach(p=>prefetch(p.tracks.slice(0,24)));
 async function pumpArt(){if(artBusy)return;artBusy=true;while(artQ.length){const {k,q}=artQ.shift();if(art[k]!==undefined)continue;
- try{const j=await (await fetch('https://itunes.apple.com/search?entity=song&limit=1&country='+region+'&term='+encodeURIComponent(q))).json();
-  const u=safeUrl(j.results&&j.results[0]&&j.results[0].artworkUrl100);art[k]=u?big(u):'';store.set('ondaArt',art);coverRefresh(k);
-  if(u)document.querySelectorAll(`[data-ak="${CSS.escape(k)}"]`).forEach(el=>{el.style.background='';el.style.backgroundImage='url('+art[k]+')';el.textContent=''})}catch(e){}
- await new Promise(r=>setTimeout(r,3000))}artBusy=false}
+ const r=await findArt(q);if(r!==undefined){art[k]=r?r.u:'';if(r)artAlb[k]=r.alb;store.set('ondaArt',art);store.set('ondaAlb',artAlb);coverRefresh(k);
+  if(r)document.querySelectorAll(`[data-ak="${CSS.escape(k)}"]`).forEach(el=>{el.style.background='';el.style.backgroundImage='url('+art[k]+')';el.textContent=''})}
+ await new Promise(r=>setTimeout(r,200))}artBusy=false}
 // a newly loaded cover can change which 4 covers a list mosaic shows (duplicates become visible), so redraw lists
-let crT;function coverRefresh(k){if(!pls.some(p=>p.tracks.slice(0,12).some(t=>artKey(t)===k)))return;clearTimeout(crT);
+let crT;function coverRefresh(k){if(!pls.some(p=>p.tracks.slice(0,24).some(t=>artKey(t)===k)))return;clearTimeout(crT);
  crT=setTimeout(()=>{renderSide();if(['home','lib','pl'].includes(view.v))renderMain()},1500)}
 // iTunes catalog: artists, albums and their songs (free, no key)
 const it=async q=>{const r=await fetch('https://itunes.apple.com/'+q+'&country='+region);return (await r.json()).results||[]};
-const itTrack=x=>{const t={artist:x.artistName,title:x.trackName},u=safeUrl(x.artworkUrl100);if(u)art[artKey(t)]=big(u);return t};
+const itTrack=x=>{const t={artist:x.artistName,title:x.trackName},u=safeUrl(x.artworkUrl100);if(u){art[artKey(t)]=big(u);artAlb[artKey(t)]='it'+x.collectionId}return t};
 
 // ---- dialogs (native <dialog>)
 function ask(title,body,ok='Aceptar'){const d=$('#dlg');$('#dlgT').textContent=title;$('#dlgB').innerHTML=body;$('#dlgOk').textContent=ok;d.returnValue='';d.showModal();
@@ -293,10 +304,12 @@ const row=(t,i)=>`<div class="tr${cur&&key(cur)===key(t)?' on':''}" data-i="${i}
  <span class="act"><button data-a="like" title="Me gusta">${isLiked(t)?'♥':'♡'}</button><button data-a="q" title="Añadir a la cola">⊕</button><button data-a="menu" title="Más opciones">⋯</button></span></div>`;
 const rows=(list,rm)=>{shown=list;shownList=rm?list:null;return list.length?list.map((t,i)=>row(t,i)).join(''):'<div class="empty">Aquí no hay canciones todavía.</div>'};
 const allTracks=()=>{const m=new Map();[...lib,...pls.flatMap(p=>p.tracks)].forEach(t=>{if(!m.has(key(t)))m.set(key(t),t)});return[...m.values()]};
-// list cover: mosaic of the first 4 distinct covers; a single cover when the list doesn't have 4 different ones
+// list cover: mosaic of the first 4 songs with a known cover from 4 different albums (same album = same cover, even
+// when its image comes from two places); a single cover until 4 different ones are known
 function plCover(p,bg){if(p.liked)return cover('♥',bg);const seen=new Set(),cells=[];
- for(const t of p.tracks){const u=artUrl(t)||'k:'+artKey(t);if(seen.has(u))continue;seen.add(u);cells.push(t);if(cells.length===4)break}
- return cells.length<4?tcover(p.tracks[0],bg,p.name):`<div class="cv mosaic${bg?' big':''}">${cells.map(t=>tcover(t)).join('')}</div>`}
+ for(const t of p.tracks){const u=artUrl(t);if(!u)continue;const alb=artAlb[artKey(t)];if(seen.has(u)||(alb&&seen.has(alb)))continue;
+  seen.add(u);if(alb)seen.add(alb);cells.push(t);if(cells.length===4)break}
+ return cells.length<4?tcover(cells[0]||p.tracks[0],bg,p.name):`<div class="cv mosaic${bg?' big':''}">${cells.map(t=>tcover(t)).join('')}</div>`}
 const card=(attrs,cv,title,sub,fab)=>`<div class="card" ${attrs}>${cv}<b>${esc(title)}</b><small>${esc(sub)}</small>${fab||''}</div>`;
 const albumCard=x=>card(`data-alb="${+x.collectionId}"`,imgCover(x.artworkUrl100,x.collectionName),x.collectionName,x.artistName+(x.releaseDate?' · '+x.releaseDate.slice(0,4):''));
 const artistCard=x=>`<div class="card artist" data-artid="${+x.artistId}" data-name="${esc(x.artistName)}">${cover(x.artistName)}<b>${esc(x.artistName)}</b><small>Artista</small></div>`;
@@ -338,7 +351,7 @@ function renderMain(){const m=$('#main'),v=view.v;
   <div class="tr lib" data-go="files"><span></span>${cover('♫')}<div class="tt"><b>Tus archivos</b><small>${lib.length} canciones en tu equipo</small></div><span></span></div>`}
  else if(v==='files'){m.innerHTML=hdr(cover('♫',1),'Biblioteca','Tus archivos',lib.length+' canciones · suenan sin conexión')+tools('<button data-go="add">+ Añadir archivos</button>')+rows(lib,true)}
  else if(v==='pl'){const p=pls[view.i];if(!p)return go('home');m.innerHTML=hdr(plCover(p,1),'Lista',p.name,p.tracks.length+' canciones')+
-  tools(`<button data-go="addSongs">＋ Añadir canciones</button><button data-go="share">⇪ Compartir</button>${p.liked?'':'<button data-go="ren">✎ Renombrar</button><button data-go="del">🗑 Borrar</button>'}`)+rows(p.tracks,true)}
+  tools(`<button data-go="addSongs">＋ Añadir canciones</button><button data-go="share">⇪ Compartir</button>${p.liked?'':'<button data-go="ren">✎ Renombrar</button><button data-go="del">🗑 Borrar</button>'}`)+rows(p.tracks,true);prefetch(p.tracks)}
  observeArt()}
 function renderSide(){$('#side').innerHTML=`<div class="logo"><img src="icon.svg" alt="">On<b>da</b></div>
  ${[['home','⌂','Inicio'],['search','⌕','Buscar'],['lib','▤','Biblioteca'],['dj','🎧','Modo DJ']].map(([v,i,l])=>`<button class="nav${view.v===v?' on':''}" data-go="${v}">${i} ${l}</button>`).join('')}
@@ -453,5 +466,5 @@ document.addEventListener('click',async e=>{
  if(el.dataset.pl!==undefined)return go({v:'pl',i:+el.dataset.pl});
  if(el.classList.contains('tr')&&el.dataset.i!==undefined)playFrom(shown,+el.dataset.i)});
 $('#files').onchange=e=>{const n=e.target.files.length;[...e.target.files].forEach(f=>{const t={artist:'',title:f.name.replace(/\.[^.]+$/,''),url:URL.createObjectURL(f)};lib.push(t);if(ctxSrc===lib){ctx.push(t);if(shuffle)bag.splice(Math.floor(Math.random()*(bag.length+1)),0,ctx.length-1)}});e.target.value='';notice(n+' archivo(s) añadidos');render()};
-render();
+render();prefetchLists();
 </script></body></html>
