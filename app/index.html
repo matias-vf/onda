@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Onda</title><link rel="icon" href="icon.svg"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#0d0f14">
+<style>
+:root{--bg:#0d0f14;--side:#12151c;--card:#1a1f29;--hov:#232a37;--tx:#eef1f6;--mu:#8c96a8;--ac:#ff7a45;--ln:#262d3a}
+@media (prefers-color-scheme:light){:root{--bg:#f5f6f9;--side:#fff;--card:#fff;--hov:#eceef3;--tx:#141821;--mu:#5d6676;--ln:#e2e5ec}}
+*{box-sizing:border-box}html,body{height:100%;margin:0}
+body{font:14px/1.4 system-ui,sans-serif;background:var(--bg);color:var(--tx);display:grid;grid-template-rows:1fr auto auto;overflow:hidden}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;border-radius:8px;padding:6px 8px}button:hover{background:var(--hov)}
+.pri{background:var(--ac);color:#fff;font-weight:600;padding:9px 18px;border-radius:99px}.pri:hover{background:var(--ac);filter:brightness(1.1)}
+input,textarea,select{font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--ln);border-radius:8px;padding:8px}
+#app{display:grid;grid-template-columns:240px 1fr;min-height:0}#app.np{grid-template-columns:240px 1fr 320px}
+#side{background:var(--side);border-right:1px solid var(--ln);padding:14px 10px;overflow:auto;display:flex;flex-direction:column;gap:2px}
+.logo{font-size:22px;font-weight:800;padding:4px 10px 14px}.logo b{color:var(--ac)}
+.nav{display:flex;gap:10px;align-items:center;width:100%;text-align:left;padding:9px 10px;font-weight:600;color:var(--mu)}.nav.on{color:var(--tx);background:var(--hov)}
+.sh{display:flex;justify-content:space-between;align-items:center;margin:14px 0 4px;padding:0 6px;color:var(--mu);font-size:12px;text-transform:uppercase;letter-spacing:.06em}
+.pli{display:flex;gap:10px;align-items:center;width:100%;text-align:left;padding:5px 6px}.pli.on{background:var(--hov)}.pli span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cv{width:40px;height:40px;border-radius:6px;display:grid;place-items:center;font-weight:800;color:#fff;flex:none;font-size:18px}.cv.big{width:180px;height:180px;border-radius:10px;font-size:72px;box-shadow:0 8px 30px #0006}
+#main{overflow:auto;padding:22px 26px 30px;min-width:0}h1{font-size:30px;margin:0 0 18px}h2{font-size:19px;margin:26px 0 12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px}
+.card{background:var(--card);border-radius:12px;padding:12px;cursor:pointer;position:relative;display:flex;flex-direction:column;gap:4px}.card:hover{background:var(--hov)}
+.card .cv{width:100%;height:auto;aspect-ratio:1;font-size:56px;margin-bottom:6px}.card small{color:var(--mu)}
+.fab{position:absolute;right:18px;top:calc(100% - 96px);width:44px;height:44px;border-radius:50%;background:var(--ac);color:#fff;opacity:0;transition:.15s}.card:hover .fab{opacity:1}.fab:hover{background:var(--ac)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}.chip{background:var(--card);border-radius:99px;padding:7px 14px}
+.hdr{display:flex;gap:22px;align-items:flex-end;margin-bottom:18px;flex-wrap:wrap}.hdr small{color:var(--mu);text-transform:uppercase;font-size:11px;font-weight:700}.hdr h1{font-size:44px;margin:4px 0}
+.tools{display:flex;gap:8px;align-items:center;margin:0 0 14px;flex-wrap:wrap}
+.tr{display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:center;padding:6px 8px;border-radius:8px;cursor:pointer}.tr:hover{background:var(--hov)}
+.tr .n{color:var(--mu);text-align:right}.tr.on b{color:var(--ac)}.tt{min-width:0}.tt b,.tt small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.tt b{font-weight:500}.tt small{color:var(--mu)}
+.act{display:flex;opacity:.35}.tr:hover .act{opacity:1}.act button{padding:4px 7px}
+.empty{color:var(--mu);padding:12px 4px}
+#np{background:var(--side);border-left:1px solid var(--ln);overflow:auto;padding:14px;display:none}#app.np #np{display:block}
+#ytwrap{display:none;aspect-ratio:16/9;width:100%;min-height:200px;background:#000;border-radius:10px;overflow:hidden;margin-bottom:10px}#ytwrap.on{display:block}
+#bar{display:grid;grid-template-columns:1fr 2fr 1fr;gap:12px;align-items:center;padding:10px 16px;background:var(--side);border-top:1px solid var(--ln)}
+.now{display:flex;gap:10px;align-items:center;min-width:0}.ctr{display:flex;flex-direction:column;align-items:center;gap:4px}.btns{display:flex;gap:6px;align-items:center}
+#pp{width:40px;height:40px;border-radius:50%;background:var(--tx);color:var(--bg);font-size:16px}#pp:hover{background:var(--tx)}
+.prog{display:flex;gap:8px;align-items:center;width:100%;color:var(--mu);font-size:12px}input[type=range]{flex:1;accent-color:var(--ac);padding:0;border:0;background:none}
+.right{display:flex;gap:6px;align-items:center;justify-content:flex-end}.tog.on{color:var(--ac)}
+#note{position:fixed;top:14px;left:50%;transform:translateX(-50%);background:var(--tx);color:var(--bg);padding:8px 16px;border-radius:99px;font-weight:600;opacity:0;pointer-events:none;transition:.2s;z-index:9}#note.on{opacity:1}
+#menu{position:fixed;display:none;z-index:8;background:var(--card);border:1px solid var(--ln);border-radius:10px;padding:6px;box-shadow:0 8px 30px #0005;min-width:230px}#menu button{display:block;width:100%;text-align:left}
+h2 button{font-size:14px;vertical-align:middle}
+#mnav{display:none}dialog{background:var(--card);color:var(--tx);border:1px solid var(--ln);border-radius:14px;max-width:440px;width:92%}dialog h3{margin-top:0}dialog menu{display:flex;justify-content:flex-end;gap:8px;padding:0;margin:16px 0 0}
+.opt{display:flex;gap:8px;align-items:center;padding:6px 0}#dlgB input:not([type=radio]),#dlgB textarea{width:100%}
+@media(max-width:760px){#app,#app.np{grid-template-columns:1fr}#side{display:none}#main{padding:16px}#app.np #np{position:fixed;left:0;right:0;bottom:118px;max-height:50vh;z-index:5;border-top:1px solid var(--ln)}
+#bar{grid-template-columns:1fr auto;padding:8px 12px}.ctr .prog,.right .vol,#sleep{display:none}.ctr{order:2}.hdr h1{font-size:30px}.cv.big{width:120px;height:120px;font-size:48px}
+#mnav{display:flex;justify-content:space-around;background:var(--side);border-top:1px solid var(--ln)}#mnav button{flex:1;padding:10px;font-size:12px}}
+</style></head><body>
+<div id="app"><aside id="side"></aside><main id="main"></main>
+<aside id="np"><div id="ytwrap"><div id="yt"></div></div><div id="npInfo"></div></aside></div>
+<footer id="bar">
+ <div class="now" id="nowInfo"></div>
+ <div class="ctr"><div class="btns"><button id="shuf" class="tog" title="Aleatorio real: no repite hasta sonar todas">🔀</button><button id="prev" title="Anterior">⏮</button><button id="pp" title="Reproducir">▶</button><button id="next" title="Siguiente">⏭</button><button id="rep" class="tog on" title="Repetir">🔁</button></div>
+ <div class="prog"><span id="t">0:00</span><input id="seek" type="range" min="0" max="1000" value="0"><span id="d">0:00</span></div></div>
+ <div class="right"><button id="npBtn" title="Ahora suena y cola">☰</button><select id="sleep" title="Temporizador"><option value="0">⏾</option><option value="15">15 min</option><option value="30">30 min</option><option value="60">60 min</option></select><input class="vol" id="vol" type="range" min="0" max="1" step="0.01" value="0.8" title="Volumen" style="max-width:100px"></div>
+</footer>
+<nav id="mnav"><button data-go="home">⌂<br>Inicio</button><button data-go="search">⌕<br>Buscar</button><button data-go="lib">▤<br>Biblioteca</button></nav>
+<div id="note"></div><div id="menu"></div>
+<dialog id="dlg"><form method="dialog"><h3 id="dlgT"></h3><div id="dlgB"></div><menu><button value="">Cancelar</button><button id="dlgOk" class="pri" value="ok">Aceptar</button></menu></form></dialog>
+<input id="files" type="file" accept="audio/*" multiple hidden><audio id="a"></audio>
+<script>document.write('<script src="playlists.js?'+Date.now()+'"><\/script>')/* always load the latest playlists, never a cached copy */</script>
+<script>
+const $=s=>document.querySelector(s),a=$('#a');
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const store={get(k,d){try{return JSON.parse(localStorage[k])??d}catch(e){return d}},set(k,v){try{localStorage[k]=JSON.stringify(v)}catch(e){}}};
+const key=t=>(t.artist?t.artist+' - ':'')+t.title,norm=s=>String(s||'').toLowerCase().trim();
+const parseLine=s=>{const i=s.indexOf(' - ');return i<0?{artist:'',title:s.trim()}:{artist:s.slice(0,i).trim(),title:s.slice(i+3).trim()}};
+const fmt=s=>isFinite(s)&&s>0?Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0'):'0:00';
+const hue=s=>{let h=0;for(const c of String(s))h=(h*31+c.codePointAt(0))%360;return h};
+const cover=(s,big)=>`<div class="cv${big?' big':''}" style="background:linear-gradient(135deg,hsl(${hue(s)} 70% 50%),hsl(${(hue(s)+70)%360} 65% 28%))">${esc([...String(s).trim()][0]||'♪')}</div>`;
+let note;function notice(m){const n=$('#note');n.textContent=m;n.classList.add('on');clearTimeout(note);note=setTimeout(()=>n.classList.remove('on'),2600)}
+
+// ---- data: local files (+3 synthesized demos), playlists (persisted), YouTube cache/key
+let lib=[],pls=store.get('ondaPl',[]),ytCache=store.get('ondaYT',{}),ytKey=store.get('ondaKey','');
+const savePl=()=>store.set('ondaPl',pls);
+function wav(notes,bpm){const sr=22050,beat=60/bpm,n=Math.floor(sr*beat*notes.length),b=new DataView(new ArrayBuffer(44+n*2)),w=(o,s)=>[...s].forEach((c,i)=>b.setUint8(o+i,c.charCodeAt(0)));
+ w(0,'RIFF');b.setUint32(4,36+n*2,1);w(8,'WAVEfmt ');b.setUint32(16,16,1);b.setUint16(20,1,1);b.setUint16(22,1,1);b.setUint32(24,sr,1);b.setUint32(28,sr*2,1);b.setUint16(32,2,1);b.setUint16(34,16,1);w(36,'data');b.setUint32(40,n*2,1);
+ for(let i=0;i<n;i++){const k=Math.floor(i/(sr*beat)),t=(i%(sr*beat))/sr;b.setInt16(44+i*2,Math.sin(2*Math.PI*440*2**((notes[k]-69)/12)*i/sr)*Math.exp(-3*t)*9000,1)}
+ return URL.createObjectURL(new Blob([b],{type:'audio/wav'}))}
+[['Amanecer (demo)',[60,64,67,72,67,64,60,62,65,69,72,69],140],['Marea (demo)',[57,60,64,60,55,59,62,59,53,57,60,57],110],['Brisa (demo)',[64,62,60,62,64,64,64,62,62,62,64,67],160]]
+ .forEach(([t,ns,bpm])=>lib.push({artist:'',title:t,url:wav(ns,bpm)}));
+if(!pls.some(p=>p.liked))pls.unshift({name:'Me gusta',liked:true,tracks:[]});
+// Seed/refresh lists from playlists.js: add new, grow ones the file has more of, never resurrect ones you deleted.
+if(window.SPOTIFY_PLAYLISTS){const seeded=store.get('ondaSeeded',[]);SPOTIFY_PLAYLISTS.forEach(p=>{const ex=pls.find(q=>q.name===p.name),t=p.tracks.map(parseLine);
+ if(ex){if(ex.tracks.length<t.length)ex.tracks=t}else if(!seeded.includes(p.name))pls.push({name:p.name,tracks:t});if(!seeded.includes(p.name))seeded.push(p.name)});store.set('ondaSeeded',seeded)}
+savePl();
+const likedPl=()=>pls.find(p=>p.liked),isLiked=t=>likedPl().tracks.some(x=>key(x)===key(t));
+const local=t=>t.url?t:lib.find(l=>norm(l.title)===norm(t.title)||norm(l.title)===norm(key(t)));
+
+// ---- player: local file via <audio>, otherwise YouTube's official embedded player (must stay visible)
+let queue=[],ctx=[],idx=-1,cur=null,hist=[],shuffle=false,bag=[],repeat=1,isYT=false,yt=null,ytReady=false,ytIds=[],ytTry=0,seeking=false,sleepT;
+async function ytFind(t){const k=key(t);if(t.ytId)return[t.ytId];if(ytCache[k])return ytCache[k];if(!ytKey)return[];
+ try{const j=await (await fetch('https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoEmbeddable=true&maxResults=3&q='+encodeURIComponent(k)+'&key='+encodeURIComponent(ytKey))).json();
+  if(j.error){notice('YouTube: '+j.error.message);return[]}const ids=(j.items||[]).map(x=>x.id&&x.id.videoId).filter(Boolean);ytCache[k]=ids;store.set('ondaYT',ytCache);return ids}catch(e){notice('Sin conexión con YouTube');return[]}}
+let pendingYT=null;function ytPlay(id){if(!id){notice('Este vídeo no se puede reproducir aquí');return next()}$('#ytwrap').classList.add('on');$('#app').classList.add('np');if(ytReady)return yt.loadVideoById(id);pendingYT=id;
+ if(!window.YT&&!$('#ytapi')){const s=document.createElement('script');s.id='ytapi';s.src='https://www.youtube.com/iframe_api';document.head.appendChild(s)}}
+window.onYouTubeIframeAPIReady=()=>{yt=new YT.Player('yt',{width:'100%',height:'100%',videoId:pendingYT,playerVars:{autoplay:1,playsinline:1},events:{
+ onReady:e=>{ytReady=true;e.target.setVolume($('#vol').value*100);if(isYT)e.target.playVideo()},onStateChange:e=>{if(e.data===0&&isYT&&endedFor!==cur){endedFor=cur;ended()}renderBar()},
+ onError:()=>{if(isYT&&++ytTry<ytIds.length&&ytIds[ytTry])yt.loadVideoById(ytIds[ytTry]);else{notice('Este vídeo no se puede reproducir aquí');next()}}}})};
+function stopYT(){isYT=false;$('#ytwrap').classList.remove('on');if(ytReady)yt.stopVideo()}
+async function load(t,back){if(!t)return;if(cur&&!back)hist.push(cur);cur=t;endedFor=null;render();setMeta();const l=local(t);
+ if(l){stopYT();a.src=l.url;a.play().catch(()=>{});return}
+ a.pause();a.removeAttribute('src');isYT=true;ytIds=await ytFind(t);ytTry=0;if(cur!==t)return;
+ if(!ytIds.length){isYT=false;renderBar();if(!ytKey)settings(true);else notice('No encontré esta canción en YouTube');return}ytPlay(ytIds[0])}
+const playing=()=>isYT?ytReady&&yt.getPlayerState()===1:!a.paused&&!!a.src;
+const pos=()=>isYT?(ytReady?yt.getCurrentTime():0):a.currentTime,dur=()=>isYT?(ytReady?yt.getDuration():0):(a.duration||0);
+function seek(s){isYT?ytReady&&yt.seekTo(s,true):(a.currentTime=s)}
+function toggle(){if(!cur)return playFrom(ctx.length?ctx:lib,0);if(isYT){if(ytReady)playing()?yt.pauseVideo():yt.playVideo()}else a.paused?a.play():a.pause()}
+function refill(){bag=ctx.map((_,i)=>i).filter(i=>i!==idx);for(let i=bag.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[bag[i],bag[j]]=[bag[j],bag[i]]}}
+let ctxSrc=null;function playFrom(list,i){if(!list.length)return;ctxSrc=list;ctx=list.slice();idx=i;if(shuffle)refill();load(ctx[i])}
+function next(){if(queue.length)return load(queue.shift());if(!ctx.length)return;let i;
+ if(shuffle){if(!bag.length){if(!repeat)return;refill()}i=bag.shift()}else{i=idx+1;if(i>=ctx.length){if(!repeat)return;i=0}}idx=i;load(ctx[i])}
+function prev(){if(pos()>3||!hist.length)return seek(0);load(hist.pop(),true)}
+function ended(){if(repeat===2){endedFor=null;seek(0);isYT?yt.playVideo():a.play()}else next()}
+function setMeta(){if(cur&&'mediaSession'in navigator)navigator.mediaSession.metadata=new MediaMetadata({title:cur.title,artist:cur.artist||'Onda'})}
+a.onended=ended;a.onplay=a.onpause=()=>renderBar();
+$('#pp').onclick=toggle;$('#next').onclick=next;$('#prev').onclick=prev;
+$('#shuf').onclick=()=>{shuffle=!shuffle;if(shuffle)refill();renderBar();renderNP()};
+$('#rep').onclick=()=>{repeat=(repeat+1)%3;renderBar()};
+$('#seek').oninput=e=>{seeking=true;const d=dur();if(d)seek(e.target.value/1000*d)};$('#seek').onchange=()=>seeking=false;
+$('#vol').oninput=e=>{a.volume=+e.target.value;if(ytReady)yt.setVolume(e.target.value*100)};
+$('#sleep').onchange=e=>{clearTimeout(sleepT);const m=+e.target.value;if(m){notice('Se pausará en '+m+' min');sleepT=setTimeout(()=>{isYT?ytReady&&yt.pauseVideo():a.pause();e.target.value=0},m*60000)}};
+$('#npBtn').onclick=()=>{$('#app').classList.toggle('np');renderNP()};
+// YouTube sometimes just pauses on the last frame instead of reporting "ended", so also detect the end by position.
+let endedFor=null;
+setInterval(()=>{const d=dur(),p=pos();$('#t').textContent=fmt(p);$('#d').textContent=fmt(d);if(d&&!seeking)$('#seek').value=p/d*1000;
+ if(isYT&&ytReady&&cur&&endedFor!==cur){const s=yt.getPlayerState();if(s===0||(d>1&&p>=d-1&&s!==1&&s!==3)){endedFor=cur;ended()}}},500);
+if('mediaSession'in navigator){const m=navigator.mediaSession;m.setActionHandler('nexttrack',next);m.setActionHandler('previoustrack',prev);m.setActionHandler('play',toggle);m.setActionHandler('pause',toggle)}
+
+// ---- dialogs (native <dialog>)
+function ask(title,body,ok='Aceptar'){const d=$('#dlg');$('#dlgT').textContent=title;$('#dlgB').innerHTML=body;$('#dlgOk').textContent=ok;d.returnValue='';d.showModal();
+ return new Promise(r=>d.onclose=()=>r(d.returnValue==='ok'?Object.fromEntries(new FormData(d.querySelector('form'))):null))}
+async function settings(why){const r=await ask('Escuchar todo dentro de Onda',`${why?'<p>Esta canción no está en tus archivos. Para que suene aquí, Onda la busca en YouTube y la reproduce con su reproductor oficial.</p>':''}
+ <p>Necesitas una clave gratuita de la API de YouTube (2 minutos): entra en <a href="https://console.cloud.google.com/apis/library/youtube.googleapis.com" target="_blank" rel="noopener">Google Cloud</a>, activa «YouTube Data API v3» y en «Credenciales» crea una «Clave de API». Pégala aquí. Se guarda solo en este navegador.</p>
+ <input name="k" placeholder="Clave de API de YouTube" value="${esc(ytKey)}" autocomplete="off">`,'Guardar');
+ if(r){ytKey=r.k.trim();store.set('ondaKey',ytKey);notice(ytKey?'Clave guardada':'Clave borrada');render();if(ytKey&&cur&&!local(cur))load(cur,true)}}
+async function addTo(t){const opts=pls.map((p,i)=>`<label class="opt"><input type="radio" name="pl" value="${i}"${i?'':' checked'}> ${esc(p.name)}</label>`).join('');
+ const r=await ask('Añadir a una lista',opts+'<label class="opt"><input type="radio" name="pl" value="new"> Nueva: <input name="nn" placeholder="Nombre de la lista"></label>');if(!r)return;
+ let p;if(r.pl==='new'){if(!r.nn.trim())return;p={name:r.nn.trim(),tracks:[]};pls.push(p)}else p=pls[+r.pl];p.tracks.push(slim(t));savePl();notice('Añadida a «'+p.name.trim()+'»');render()}
+function like(t){const L=likedPl().tracks,i=L.findIndex(x=>key(x)===key(t));i<0?L.unshift(slim(t)):L.splice(i,1);savePl();render()}
+
+// ---- discovery: YouTube search for songs you don't have yet, daily recommendations, mixes from your lists
+const slim=t=>t.ytId?{artist:t.artist||'',title:t.title,ytId:t.ytId}:{artist:t.artist||'',title:t.title};
+const clean=s=>s.replace(/&amp;/g,'&').replace(/&#39;/g,"'").replace(/&quot;/g,'"').replace(/\s*[(\[][^)\]]*(official|oficial|video|audio|lyric|letra|visuali[sz]er)[^)\]]*[)\]]/ig,'').trim();
+async function ytSearch(q,n){if(!ytKey){settings();return[]}
+ try{const j=await (await fetch('https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoEmbeddable=true&videoCategoryId=10&maxResults='+n+'&q='+encodeURIComponent(q)+'&key='+encodeURIComponent(ytKey))).json();
+  if(j.error){notice('YouTube: '+j.error.message);return[]}
+  const out=(j.items||[]).filter(x=>x.id&&x.id.videoId).map(x=>{const raw=clean(x.snippet.title),i=raw.indexOf(' - '),t=i>0?{artist:raw.slice(0,i).trim(),title:raw.slice(i+3).trim()}:{artist:x.snippet.channelTitle.replace(/ - Topic$/,'').replace(/VEVO$/i,'').trim(),title:raw};
+   t.ytId=x.id.videoId;ytCache[key(t)]=[t.ytId];return t});store.set('ondaYT',ytCache);return out}catch(e){notice('Sin conexión con YouTube');return[]}}
+const topArtists=n=>{const c={};pls.forEach(p=>p.tracks.forEach(t=>(t.artist||'').split(', ').forEach(x=>x&&(c[x]=(c[x]||0)+1))));return Object.entries(c).sort((a,b)=>b[1]-a[1]).slice(0,n).map(x=>x[0])};
+const today=()=>new Date().toISOString().slice(0,10);let recs=store.get('ondaRecs',null),recsBusy=false,mixes=[];
+// drop broken entries saved by older versions (results without a video id)
+for(const k in ytCache)if(!Array.isArray(ytCache[k])||!ytCache[k].every(Boolean))delete ytCache[k];if(recs)recs.items=recs.items.filter(t=>t.ytId);
+// Each day: 3 of your top artists (rotating), up to 8 YouTube results each, minus songs you already saved. ~300 of the 10,000 free daily quota units.
+async function loadRecs(){if(recsBusy||!ytKey)return;recsBusy=true;try{const top=topArtists(12),d=Math.floor(Date.now()/864e5),pick=[...new Set([0,1,2].map(k=>top[(d*3+k)%top.length]).filter(Boolean))],
+ have=new Set(allTracks().map(t=>norm(key(t)))),seen=new Set(),items=[];
+ for(const ar of pick)(await ytSearch(ar,8)).forEach(t=>{const k=norm(key(t));if(!have.has(k)&&!seen.has(k)){seen.add(k);items.push(t)}});
+ recs={day:today(),items:items.slice(0,15)};store.set('ondaRecs',recs)}finally{recsBusy=false}if(view.v==='home')renderMain()}
+// ---- song menu (⋯ button or right click)
+let menuT=null,menuI=-1;
+function openMenu(x,y,i){menuT=shown[i];menuI=i;if(!menuT)return;const m=$('#menu'),a=(menuT.artist||'').split(', ')[0];
+ m.innerHTML=[['next','▶ Reproducir a continuación'],['q','⊕ Añadir a la cola'],['pl','≡ Añadir a una lista…'],['like',isLiked(menuT)?'♥ Quitar de Me gusta':'♡ Me gusta'],...(a?[['art','⌕ Más de '+esc(a)]]:[]),...(shownList?[['rm','✕ Quitar de esta lista']]:[])]
+  .map(([k,l])=>`<button data-m="${k}">${l}</button>`).join('');m.style.display='block';const r=m.getBoundingClientRect();
+ m.style.left=Math.max(8,Math.min(x,innerWidth-r.width-8))+'px';m.style.top=Math.max(8,Math.min(y,innerHeight-r.height-8))+'px'}
+document.addEventListener('click',e=>{const m=$('#menu'),it=e.target.closest('[data-m]');if(it){e.stopPropagation();m.style.display='none';const t=menuT,k=it.dataset.m;
+ if(k==='next'){queue.unshift(t);notice('Sonará a continuación');renderNP()}else if(k==='q'){queue.push(t);notice('Añadida a la cola');renderNP()}else if(k==='pl')addTo(t);else if(k==='like')like(t);
+ else if(k==='art')go({v:'search',q:t.artist.split(', ')[0],auto:1});else if(k==='rm'&&shownList){shownList.splice(menuI,1);savePl();render()}return}
+ if(!e.target.closest('#menu'))m.style.display='none'},true);
+document.addEventListener('contextmenu',e=>{const r=e.target.closest('.tr[data-i]');if(r){e.preventDefault();openMenu(e.clientX,e.clientY,+r.dataset.i)}});
+
+// ---- add songs to a list from inside the app (your library + new songs from YouTube), and share a list as text
+function addSongs(p){ask('Añadir canciones a «'+p.name.trim()+'»','<div style="display:flex;gap:6px"><input id="as" placeholder="Canción o artista" style="flex:1"><button type="button" id="asb" class="pri">Buscar</button></div><div id="asr" style="max-height:50vh;overflow:auto;margin-top:8px"><p class="empty">Escribe para buscar en tus listas. Pulsa Buscar (o Enter) para buscar también canciones nuevas.</p></div>','Listo');
+ const inp=$('#as'),out=$('#asr'),mine=s=>allTracks().filter(t=>norm(t.title).includes(s)||norm(t.artist).includes(s)).slice(0,25);let res=[];
+ const show=list=>{res=list;out.innerHTML=list.length?list.map((t,i)=>`<div class="opt"><div class="tt" style="flex:1"><b>${esc(t.title)}</b><small>${esc(t.artist||'Tu archivo')}${t.ytId?' · nueva':''}</small></div><button type="button" data-add="${i}">＋ Añadir</button></div>`).join(''):'<p class="empty">Sin resultados.</p>'};
+ const web=async()=>{const s=inp.value.trim();if(!s)return;out.innerHTML='<p class="empty">Buscando…</p>';show(mine(norm(s)).concat(ytKey?await ytSearch(s,12):[]))};
+ inp.oninput=()=>{const s=norm(inp.value);if(s)show(mine(s))};$('#asb').onclick=web;inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();web()}};
+ out.onclick=e=>{const b=e.target.closest('[data-add]');if(!b||b.disabled)return;p.tracks.push(slim(res[+b.dataset.add]));savePl();b.textContent='✓ Añadida';b.disabled=true};
+ $('#dlg').addEventListener('close',()=>render(),{once:true});inp.focus()}
+async function sharePl(p){const text=p.tracks.map(key).join('\n');
+ const r=await ask('Compartir «'+p.name.trim()+'»',`<p>Envía este texto a quien quieras. En su Onda: <b>Biblioteca → Importar texto</b>, y tendrá la misma lista.</p><textarea readonly rows="10">${esc(text)}</textarea>`,'Copiar');
+ if(r){try{await navigator.clipboard.writeText(text);notice('Lista copiada')}catch(e){notice('Selecciona el texto y cópialo con Ctrl+C')}}}
+
+// ---- transfer lists from Spotify (via the desktop app's local server) or YouTube Music (via the YouTube API)
+async function spApi(kind,id){const r=await fetch('/api/spotify?kind='+kind+'&id='+id);if(r.status===404||r.status===501)throw new Error('nolocal');if(!r.ok)throw new Error('Spotify no respondió');return r.json()}
+async function ytPlaylist(id,progress){const k=encodeURIComponent(ytKey),api='https://www.googleapis.com/youtube/v3/';const tracks=[];let page='';
+ const meta=await (await fetch(api+'playlists?part=snippet&id='+id+'&key='+k)).json();if(meta.error)throw new Error(meta.error.message);
+ if(!meta.items||!meta.items.length)throw new Error('esa lista es privada o no existe. En YouTube Music ponla como pública o no listada');
+ do{const j=await (await fetch(api+'playlistItems?part=snippet&maxResults=50&playlistId='+id+'&key='+k+(page?'&pageToken='+page:''))).json();if(j.error)throw new Error(j.error.message);
+  (j.items||[]).forEach(x=>{const s=x.snippet,vid=s.resourceId&&s.resourceId.videoId;if(!vid||/^(Deleted|Private) video$/.test(s.title))return;
+   const raw=clean(s.title),i=raw.indexOf(' - '),t=i>0?{artist:raw.slice(0,i).trim(),title:raw.slice(i+3).trim()}:{artist:(s.videoOwnerChannelTitle||'').replace(/ - Topic$/,'').trim(),title:raw};t.ytId=vid;tracks.push(t)});
+  page=j.nextPageToken;progress(tracks.length)}while(page);return{name:meta.items[0].snippet.title,tracks}}
+function transfer(){ask('Traspasar listas a Onda',`<p>Pega el <b>enlace de una lista</b> de Spotify o de YouTube Music (Compartir → Copiar enlace).</p>
+ <p style="color:var(--mu);font-size:13px">Spotify da solo las 100 primeras canciones por enlace. Para listas más largas o «Canciones que te gustan»: ábrela en la app de Spotify, pulsa <b>Ctrl+A</b>, luego <b>Ctrl+C</b>, y pégalo aquí. Así llegan todas y en orden.<br>Las listas de YouTube Music tienen que ser públicas o no listadas.</p>
+ <textarea id="trIn" rows="5" placeholder="https://open.spotify.com/playlist/…   o   https://music.youtube.com/playlist?list=…"></textarea>
+ <input id="trName" placeholder="Nombre en Onda (opcional)" style="margin-top:8px"><div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap"><button type="button" class="pri" id="trGo">Traspasar</button><span id="trSt" style="color:var(--mu)"></span></div>`,'Cerrar');
+ $('#trGo').onclick=async()=>{const txt=$('#trIn').value.trim(),st=$('#trSt'),btn=$('#trGo');if(!txt)return;btn.disabled=true;
+  try{let res;const sp=txt.match(/spotify\.com\/(?:intl-[a-z-]+\/)?playlist\/([A-Za-z0-9]{22})/),tr=[...txt.matchAll(/spotify\.com\/(?:intl-[a-z-]+\/)?track\/([A-Za-z0-9]{22})/g)].map(m=>m[1]),yl=txt.match(/[?&]list=([A-Za-z0-9_-]+)/);
+   if(tr.length){const tracks=[];let fail=0;for(let i=0;i<tr.length;i++){st.textContent='Leyendo canciones de Spotify… '+(i+1)+'/'+tr.length;
+     try{tracks.push(parseLine((await spApi('track',tr[i])).tracks[0]))}catch(e){if(e.message==='nolocal')throw e;fail++}}
+    res={name:'Lista de Spotify',tracks};if(fail)notice(fail+' canciones no se pudieron leer')}
+   else if(sp){st.textContent='Leyendo la lista de Spotify…';const j=await spApi('playlist',sp[1]);res={name:j.name,tracks:j.tracks.map(parseLine)};
+    if(res.tracks.length>=100)notice('Spotify da solo 100 canciones por enlace: usa Ctrl+A y Ctrl+C para traer la lista entera')}
+   else if(yl){if(!ytKey){btn.disabled=false;return settings()}res=await ytPlaylist(yl[1],n=>st.textContent='Leyendo la lista de YouTube Music… '+n)}
+   else res={name:'Lista importada',tracks:txt.split('\n').filter(s=>s.trim()).map(parseLine)};
+   if(!res.tracks.length)throw new Error('no encontré canciones en lo que pegaste');
+   const name=$('#trName').value.trim()||res.name;pls.push({name,tracks:res.tracks});savePl();render();
+   st.textContent='✓ «'+name+'» traspasada con '+res.tracks.length+' canciones. Puedes pegar otra.';$('#trIn').value='';$('#trName').value=''}
+  catch(e){st.textContent=e.message==='nolocal'?'Las listas de Spotify se traspasan desde la app de escritorio de Onda.':'No se pudo: '+e.message}finally{btn.disabled=false}}}
+
+// ---- self-update (desktop app): the local server downloads newer versions; reload when nothing is playing
+let updReady=false;
+async function checkUpdate(){try{const r=await fetch('/api/update',{cache:'no-store'});if(!r.ok)return;const j=await r.json();if(j.status!=='updated')return;
+ if(!playing())setTimeout(()=>location.reload(),j.restart?2500:300);else{updReady=true;notice('Onda se ha actualizado');renderSide()}}catch(e){}}
+setTimeout(checkUpdate,5000);setInterval(checkUpdate,3600e3);
+
+// ---- views
+let view={v:'home'},shown=[],shownList=null;
+const go=v=>{view=typeof v==='string'?{v}:v;$('#main').scrollTop=0;render()};
+const row=(t,i,rm)=>`<div class="tr${cur&&key(cur)===key(t)?' on':''}" data-i="${i}"><span class="n">${i+1}</span><div class="tt"><b>${esc(t.title)}</b><small>${esc(t.artist||'Tu archivo')}${local(t)?' · en tu equipo':''}</small></div>
+ <span class="act"><button data-a="like" title="Me gusta">${isLiked(t)?'♥':'♡'}</button><button data-a="q" title="Añadir a la cola">⊕</button><button data-a="menu" title="Más opciones">⋯</button></span></div>`;
+const rows=(list,rm)=>{shown=list;shownList=rm?list:null;return list.length?list.map((t,i)=>row(t,i,rm)).join(''):'<div class="empty">Aquí no hay canciones todavía.</div>'};
+const allTracks=()=>{const m=new Map();[...lib,...pls.flatMap(p=>p.tracks)].forEach(t=>{if(!m.has(key(t)))m.set(key(t),t)});return[...m.values()]};
+function renderMain(){const m=$('#main'),v=view.v;
+ if(v==='home'){const h=new Date().getHours(),g=h<6||h>=21?'Buenas noches':h<13?'Buenos días':'Buenas tardes',top=topArtists(12),rec=recs&&recs.day===today()?recs.items:null;
+  mixes=top.slice(0,6).map(ar=>({name:'Mezcla de '+ar,tracks:allTracks().filter(t=>(t.artist||'').split(', ').includes(ar))})).filter(x=>x.tracks.length>2);
+  m.innerHTML=`<h1>${g}</h1><div class="grid">${pls.map((p,i)=>`<div class="card" data-pl="${i}">${cover(p.liked?'♥':p.name)}<b>${esc(p.name)}</b><small>${p.tracks.length} canciones</small><button class="fab" data-play="${i}" title="Reproducir">▶</button></div>`).join('')}
+   <div class="card" data-go="files">${cover('♫')}<b>Tus archivos</b><small>${lib.length} canciones</small></div></div>
+   <h2>Recomendado para ti ${ytKey?'<button data-go="recs" title="Otras recomendaciones">↻</button>':''}</h2>${!ytKey?'<div class="empty">Para descubrir canciones nuevas, añade tu clave de YouTube en <button data-go="set">⚙ Ajustes</button>.</div>':rec?(rec.length?rows(rec):'<div class="empty">Hoy no encontré nada nuevo.</div>'):'<div class="empty">Buscando canciones nuevas para ti…</div>'}
+   ${mixes.length?`<h2>Tus mezclas</h2><div class="grid">${mixes.map((x,i)=>`<div class="card" data-mix="${i}">${cover(x.name.slice(10))}<b>${esc(x.name)}</b><small>${x.tracks.length} canciones de tus listas</small><button class="fab" data-mix="${i}" title="Reproducir">▶</button></div>`).join('')}</div>`:''}
+   ${top.length?`<h2>Tus artistas</h2><div class="chips">${top.map(x=>`<button class="chip" data-art="${esc(x)}">${esc(x)}</button>`).join('')}</div>`:''}`;
+  if(ytKey&&!rec)loadRecs()}
+ else if(v==='search'){m.innerHTML=`<h1>Buscar</h1><form id="sf" style="display:flex;gap:8px;max-width:640px;flex-wrap:wrap"><input id="q" placeholder="¿Qué quieres escuchar? Canción o artista" style="flex:1;min-width:200px;padding:12px 16px;border-radius:99px" value="${esc(view.q||'')}"><button class="pri">Buscar canciones nuevas</button></form><div id="res" style="margin-top:16px"></div>`;
+  const q=$('#q'),run=()=>{view.q=q.value;const s=norm(q.value),mine=s?allTracks().filter(t=>norm(t.title).includes(s)||norm(t.artist).includes(s)).slice(0,100):[],web=view.webQ===s&&view.web||[];
+   shown=mine.concat(web);shownList=null;
+   $('#res').innerHTML=!s?'<div class="empty">Escribe para buscar en tus listas y archivos. Pulsa «Buscar canciones nuevas» para encontrar música que aún no tienes guardada.</div>':
+    `<h2>En tu biblioteca</h2>${mine.length?mine.map((t,i)=>row(t,i)).join(''):'<div class="empty">Nada guardado coincide.</div>'}${web.length?`<h2>Canciones nuevas</h2>${web.map((t,i)=>row(t,mine.length+i)).join('')}`:view.webQ===s?'<h2>Canciones nuevas</h2><div class="empty">YouTube no devolvió resultados.</div>':''}`};
+  q.oninput=run;$('#sf').onsubmit=async e=>{e.preventDefault();const s=norm(q.value);if(!s)return;if(!ytKey)return settings();notice('Buscando…');view.web=await ytSearch(q.value,15);view.webQ=s;run()};
+  run();q.focus();if(view.auto){view.auto=0;$('#sf').requestSubmit()}}
+ else if(v==='lib'){m.innerHTML=`<h1>Biblioteca</h1><div class="tools"><button class="pri" data-go="new">+ Nueva lista</button><button class="pri" data-go="transfer">⇄ Traspasar desde Spotify o YouTube Music</button><button data-go="imp">Importar texto</button><button data-go="add">+ Añadir archivos</button></div>
+  ${pls.map((p,i)=>`<div class="tr" data-pl="${i}"><span>${cover(p.liked?'♥':p.name)}</span><div class="tt"><b>${esc(p.name)}</b><small>Lista · ${p.tracks.length} canciones</small></div><span></span></div>`).join('')}
+  <div class="tr" data-go="files"><span>${cover('♫')}</span><div class="tt"><b>Tus archivos</b><small>${lib.length} canciones en tu equipo</small></div><span></span></div>`}
+ else if(v==='files'){m.innerHTML=`<div class="hdr">${cover('♫',1)}<div><small>Biblioteca</small><h1>Tus archivos</h1><span class="mu">${lib.length} canciones · suenan sin conexión</span></div></div>
+  <div class="tools"><button class="pri" data-go="playAll">▶ Reproducir</button><button data-go="add">+ Añadir archivos</button></div>${rows(lib,true)}`}
+ else if(v==='pl'){const p=pls[view.i];if(!p)return go('home');m.innerHTML=`<div class="hdr">${cover(p.liked?'♥':p.name,1)}<div><small>Lista</small><h1>${esc(p.name)}</h1><span class="mu">${p.tracks.length} canciones</span></div></div>
+  <div class="tools"><button class="pri" data-go="playAll">▶ Reproducir</button><button data-go="shufAll" title="Aleatorio">🔀 Aleatorio</button><button data-go="qAll">⊕ Añadir a la cola</button><button data-go="addSongs">＋ Añadir canciones</button><button data-go="share">⇪ Compartir</button>${p.liked?'':'<button data-go="ren">✎ Renombrar</button><button data-go="del">🗑 Borrar</button>'}</div>${rows(p.tracks,true)}`}}
+function renderSide(){$('#side').innerHTML=`<div class="logo">On<b>da</b></div>
+ ${[['home','⌂','Inicio'],['search','⌕','Buscar'],['lib','▤','Biblioteca']].map(([v,i,l])=>`<button class="nav${view.v===v?' on':''}" data-go="${v}">${i} ${l}</button>`).join('')}
+ <div class="sh">Tus listas <span><button data-go="transfer" title="Traspasar listas desde Spotify o YouTube Music">⇄</button><button data-go="new" title="Nueva lista">＋</button></span></div>
+ ${pls.map((p,i)=>`<button class="pli${view.v==='pl'&&view.i===i?' on':''}" data-pl="${i}">${cover(p.liked?'♥':p.name)}<span>${esc(p.name)}<br><small style="color:var(--mu)">${p.tracks.length} canciones</small></span></button>`).join('')}
+ <div style="flex:1"></div>${updReady?'<button class="nav" style="color:var(--ac)" onclick="location.reload()">↻ Nueva versión: recargar</button>':''}<button class="nav" data-go="set">⚙ Ajustes</button>`;
+ document.querySelectorAll('#mnav button').forEach(b=>b.classList.toggle('on',b.dataset.go===view.v))}
+function renderBar(){$('#nowInfo').innerHTML=cur?`${cover(cur.artist||cur.title)}<div class="tt"><b>${esc(cur.title)}</b><small>${esc(cur.artist||'Tu archivo')}</small></div><button id="lk" title="Me gusta">${isLiked(cur)?'♥':'♡'}</button>`:'<span class="mu" style="color:var(--mu)">Elige algo para escuchar</span>';
+ const lk=$('#lk');if(lk)lk.onclick=()=>like(cur);$('#pp').textContent=playing()?'⏸':'▶';$('#shuf').classList.toggle('on',shuffle);
+ $('#rep').classList.toggle('on',repeat>0);$('#rep').textContent=repeat===2?'🔂':'🔁';$('#rep').title=['Repetir: no','Repetir: todo','Repetir: una'][repeat]}
+function renderNP(){if(!$('#app').classList.contains('np'))return;const up=queue.map((t,k)=>[t,'cola',k]).concat((shuffle?bag:ctx.map((_,i)=>i).slice(idx+1)).slice(0,15).map(i=>[ctx[i],'']));
+ $('#npInfo').innerHTML=`<h3 style="margin:4px 0 10px">Ahora suena</h3>${cur?`${isYT?'':cover(cur.artist||cur.title,1).replace('style="','style="width:100%;height:auto;aspect-ratio:1;')}<p><b>${esc(cur.title)}</b><br><small style="color:var(--mu)">${esc(cur.artist||'Tu archivo')}${isYT?' · vía YouTube':''}</small></p>`:'<p class="empty">Nada sonando.</p>'}
+ <h3 style="margin:18px 0 6px">A continuación</h3>${up.length?up.map(([t,c,k])=>`<div style="display:flex;align-items:center;gap:6px;padding:6px 0"><div class="tt" style="flex:1"><b>${esc(t.title)}</b><small>${esc(t.artist||'Tu archivo')}${c?' · en tu cola':''}</small></div>${c?`<button data-qrm="${k}" title="Quitar de la cola">✕</button>`:''}</div>`).join(''):'<p class="empty">No hay nada después.</p>'}
+ ${queue.length?'<button data-go="clrq">Vaciar cola</button>':''}`}
+function render(){renderSide();renderMain();renderBar();renderNP()}
+
+// ---- one click handler for everything with data-*
+document.addEventListener('click',async e=>{const el=e.target.closest('[data-go],[data-play],[data-a],[data-pl],[data-art],[data-mix],[data-qrm],.tr');if(!el||e.target.closest('dialog'))return;
+ if(el.dataset.qrm!==undefined){queue.splice(+el.dataset.qrm,1);return renderNP()}
+ if(el.dataset.mix!==undefined){e.stopPropagation();const x=mixes[+el.dataset.mix];return x&&playFrom(x.tracks,shuffle?Math.floor(Math.random()*x.tracks.length):0)}
+ if(el.dataset.play!==undefined){e.stopPropagation();const p=pls[+el.dataset.play];return playFrom(p.tracks,shuffle?Math.floor(Math.random()*p.tracks.length):0)}
+ if(el.dataset.art)return go({v:'search',q:el.dataset.art});
+ if(el.dataset.a){const r=el.closest('.tr'),i=+r.dataset.i,t=shown[i];
+  if(el.dataset.a==='like')like(t);else if(el.dataset.a==='q'){queue.push(t);notice('Añadida a la cola');renderNP()}else if(el.dataset.a==='menu')openMenu(e.clientX,e.clientY,i);return}
+ const g=el.dataset.go;if(g){
+  if(['home','search','lib','files'].includes(g))return go(g);
+  const p=view.v==='pl'?pls[view.i]:null,list=view.v==='files'?lib:p?.tracks||[];
+  if(g==='playAll')return playFrom(list,0);if(g==='shufAll'){shuffle=true;return playFrom(list,Math.floor(Math.random()*list.length))}
+  if(g==='qAll'){queue.push(...list);notice(list.length+' canciones añadidas a la cola');return renderNP()}
+  if(g==='recs'){recs=null;renderMain();return loadRecs()}
+  if(g==='addSongs'&&p)return addSongs(p);if(g==='share'&&p)return sharePl(p);
+  if(g==='transfer')return transfer();
+  if(g==='add')return $('#files').click();if(g==='set')return settings();if(g==='clrq'){queue=[];return renderNP()}
+  if(g==='new'){const r=await ask('Nueva lista','<input name="n" placeholder="Nombre de la lista" required>','Crear');if(r&&r.n.trim()){pls.push({name:r.n.trim(),tracks:[]});savePl();go({v:'pl',i:pls.length-1})}return}
+  if(g==='imp'){const r=await ask('Importar lista','<input name="n" placeholder="Nombre de la lista" required><p style="margin:10px 0 4px">Una canción por línea: <b>Artista - Canción</b></p><textarea name="t" rows="8"></textarea>','Importar');
+   if(r&&r.n.trim()){pls.push({name:r.n.trim(),tracks:r.t.split('\n').filter(s=>s.trim()).map(parseLine)});savePl();go({v:'pl',i:pls.length-1})}return}
+  if(g==='ren'&&p){const r=await ask('Renombrar lista',`<input name="n" value="${esc(p.name)}" required>`,'Guardar');if(r&&r.n.trim()){p.name=r.n.trim();savePl();render()}return}
+  if(g==='del'&&p){const r=await ask('¿Borrar «'+p.name.trim()+'»?','<p>Se borrará esta lista de Onda. Tus archivos no se tocan.</p>','Borrar');if(r){pls.splice(view.i,1);savePl();go('home')}return}
+  return}
+ if(el.dataset.pl!==undefined)return go({v:'pl',i:+el.dataset.pl});
+ if(el.classList.contains('tr')&&el.dataset.i!==undefined)playFrom(shown,+el.dataset.i)});
+$('#files').onchange=e=>{const n=e.target.files.length;[...e.target.files].forEach(f=>{const t={artist:'',title:f.name.replace(/\.[^.]+$/,''),url:URL.createObjectURL(f)};lib.push(t);if(ctxSrc===lib){ctx.push(t);if(shuffle)bag.splice(Math.floor(Math.random()*(bag.length+1)),0,ctx.length-1)}});e.target.value='';notice(n+' archivo(s) añadidos');render()};
+render();
+</script></body></html>
