@@ -55,7 +55,7 @@ body{background:radial-gradient(1100px 600px at 25% -10%,var(--glow,transparent)
 .deck .cv.big{width:100%;height:auto;aspect-ratio:1;max-width:200px;align-self:center;font-size:64px}.dlabel{font-weight:800;color:var(--ac)}
 .deck label{display:flex;gap:8px;align-items:center;color:var(--mu);font-size:13px}.deck .btns{justify-content:center}.deck .pp{width:48px;height:48px;border-radius:50%;background:var(--ac);color:#fff}
 .xfader{display:flex;gap:12px;align-items:center;max-width:520px;margin:8px auto}.xfader input{flex:1;height:28px}
-.trans{display:grid;grid-template-columns:40px 1fr auto;gap:10px;align-items:center;padding:8px;border-radius:10px;background:var(--card);margin-bottom:6px}.trans .cv{width:40px;height:40px}.trans .tt{min-width:0}.tog.on{color:var(--ac)}
+.mixres{margin:-2px 0 8px 50px;color:var(--mu);font-size:13px}.trans{display:grid;grid-template-columns:40px 1fr auto;gap:10px;align-items:center;padding:8px;border-radius:10px;background:var(--card);margin-bottom:6px}.trans .cv{width:40px;height:40px}.trans .tt{min-width:0}.tog.on{color:var(--ac)}
 .crate{display:grid;grid-template-columns:40px 1fr auto auto;gap:10px;align-items:center;padding:6px 8px;border-radius:8px}.crate:hover{background:var(--hov)}.crate .cv{width:40px;height:40px}.crate .tt{min-width:0}
 #ytwrap.dj{display:grid;grid-template-columns:1fr 1fr;gap:6px;aspect-ratio:auto;min-height:0;background:none}#ytwrap.dj iframe{position:static;aspect-ratio:16/9;height:auto}
 @media(max-width:760px){.djgrid{grid-template-columns:1fr}}
@@ -84,7 +84,7 @@ body{background:radial-gradient(1100px 600px at 25% -10%,var(--glow,transparent)
 <section id="lyr"><header><span id="lyrT"></span><button id="lyrX" title="Cerrar letra">✕</button></header><div id="lyrL"></div></section>
 <dialog id="dlg"><form method="dialog"><h3 id="dlgT"></h3><div id="dlgB"></div><menu><button value="">Cancelar</button><button id="dlgOk" class="pri" value="ok">Aceptar</button></menu></form></dialog>
 <input id="files" type="file" accept="audio/*" multiple hidden>
-<script>document.write('<script src="playlists.js?'+Date.now()+'"><\/script>')/* always load the latest playlists, never a cached copy */</script>
+<script>document.write('<script src="playlists.js?'+Date.now()+'"><\/script><script src="songdata.js?'+Date.now()+'"><\/script>')/* always load the latest playlists, never a cached copy */</script>
 <script>
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -177,7 +177,7 @@ $('#npBtn').onclick=()=>{$('#app').classList.toggle('np');renderNP()};
 // YouTube sometimes pauses on the last frame instead of reporting "ended", so the end is also detected by position.
 setInterval(()=>{const d=D(),du=dDur(d),p=dPos(d);$('#t').textContent=fmt(p);$('#d').textContent=fmt(du);if(du&&!seeking)$('#seek').value=p/du*1000;
  if(!cur||mixing||djMode||endedFor===cur)return;
- const sp=setPlan(),plan=sp?{...sp,at:Math.min(du-1,sp.at<0?du+sp.at:sp.at)}:xf&&du>xf+5?{at:du-xf,bStart:0,len:xf,style:'suave'}:null;
+ const sp=setPlan(),plan=sp?{...sp,at:Math.min(du-1,sp.at<0?du+sp.at:sp.at)}:du>8?{at:du-(xf||1.5),bStart:0,len:xf||1.2,style:'suave'}:null; // never silence: even without a crossfade the next song is preloaded and overlaps slightly
  if(plan&&du>0&&repeat!==2&&dPlaying(d)&&p>=plan.at-3){const t=advance();if(t)mixTo(t,plan);else endedFor=cur;return}
  if(d.isYT&&d.ready){const s=d.yt.getPlayerState();if(s===0||(du>1&&p>=du-1&&s!==1&&s!==3)){endedFor=cur;ended()}}},500);
 if('mediaSession'in navigator){const m=navigator.mediaSession;m.setActionHandler('nexttrack',next);m.setActionHandler('previoustrack',prev);m.setActionHandler('play',toggle);m.setActionHandler('pause',toggle)}
@@ -430,7 +430,7 @@ function renderDj(){if(view.v!=='dj')return;$('#main').innerHTML=`<h1>🎧 Modo 
  <div class="djgrid">${decks.map(djDeckHtml).join('')}</div>
  <div class="xfader"><b>A</b><input id="xfd" type="range" min="0" max="1" step="0.01" value="${djX}" aria-label="Crossfader"><b>B</b></div>
  <div class="tools" style="justify-content:center"><button class="pri" data-dk="auto">⇄ Pasar al otro plato en ${xf||6} s</button></div>
- <h2>🎛️ Set DJ automático</h2><p style="color:var(--mu)">Onda ordena las canciones por palabras que se repiten (y por ritmo cuando hay datos de BPM) y planifica cada transición con los tiempos de la letra: puente de palabra si comparten una, la intro de una bajo el final instrumental de la otra, o corte limpio al acabar la última frase. Si tienes canciones en los platos A y B, esa será la primera transición. Las canciones suenan enteras.</p>
+ <h2>🎛️ Set DJ automático</h2><p style="color:var(--mu)">Onda ordena las canciones como un DJ: tonalidades compatibles (rueda Camelot), ritmo parecido (contando medio y doble tiempo), rimas y palabras que se repiten. Cada transición dura 8, 4 o 1 compás según lo bien que encajen, la intro de la siguiente entra bajo el final de la anterior y nunca se pisan dos voces ni hay silencio. Si tienes canciones en los platos A y B, esa será la primera transición. Las canciones suenan enteras.</p>
  <div class="tools"><button data-dk="mkset">${djSet?'↻ Crear otro set':'Crear set con 5 transiciones'}</button></div><div id="setBox">${setHtml()}</div>
  <h2>Canciones para pinchar</h2><form id="cf" class="sbox"><input id="cq" placeholder="Busca en tu música; pulsa Buscar para canciones nuevas" value="${esc(view.cq||'')}"><button class="pri">Buscar</button></form>
  <div id="crate" style="margin-top:10px">${djCrateHtml()}</div>`;
@@ -449,25 +449,40 @@ let djSet=null;const anaCache={};
 async function analyze(t){const k=artKey(t);if(anaCache[k])return anaCache[k];let bpm=0,du=0;
  try{const s=await jsonp('https://api.deezer.com/search?limit=1&q='+encodeURIComponent(artQuery(t))),x=s&&s.data&&s.data[0];
   if(x){du=x.duration;const d=await jsonp('https://api.deezer.com/track/'+(+x.id)+'?x=1');bpm=Math.round(d&&d.bpm||0)}}catch(e){}
- const ly=await getLyrics(t,du);return anaCache[k]={bpm,dur:du,lines:ly&&ly.synced||[]}}
+ const sd=(window.SONGDATA||{})[norm(t.title)],ly=await getLyrics(t,du);return anaCache[k]={bpm:sd?sd[0]:bpm,cam:sd?sd[1]:'',dur:du,lines:ly&&ly.synced||[]}}
 const STOP=new Set('para pero porque como cuando donde esta este esto todo toda todos nada solo tengo tiene quiero quieres sabes eres estoy estas vamos with that this your what when have from just like they there'.split(' '));
 const words=s=>(s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').match(/[a-zñ]{4,}/g)||[]).filter(w=>!STOP.has(w));
 // a word from a's last two sung lines that b sings in its first 20 s
 function sharedWord(a,b){const tail=a.lines.slice(-2),head=b.lines.filter(l=>l.t<=20);
  for(const la of [...tail].reverse())for(const w of words(la.x)){const lb=head.find(l=>words(l.x).includes(w));if(lb)return{w,la,lb}}return null}
-// every song plays whole: b always starts from 0 at `at`; its intro sounds under a's ending and the fade lasts `len`
-function planPair(a,b){const bVoice=b.lines.length?b.lines[0].t:8,ov=Math.min(12,Math.max(2,bVoice-.5)),aEnd=a.dur||0;
- if(!aEnd)return{at:-ov-1,bStart:0,len:ov,style:'suave',why:'el final de una se funde con el inicio de la otra'};
+// harmonic mixing (Camelot wheel) and tempo fit; half/double time counts, common in reggaeton and trap
+const camN=c=>/^\d{1,2}[AB]$/.test(c||'')?[+c.slice(0,-1),c.slice(-1)]:null;
+function keyFit(a,b){const x=camN(a),y=camN(b);if(!x||!y)return 0;const d=Math.min((x[0]-y[0]+12)%12,(y[0]-x[0]+12)%12);
+ return d===0&&x[1]===y[1]?3:d===0||(d===1&&x[1]===y[1])?2:d===2&&x[1]===y[1]?1:0}
+const bpmFit=(a,b)=>{if(!a||!b)return 0;const r=Math.min(...[b,b*2,b/2].map(v=>Math.abs(a-v)/a));return r<=.03?3:r<=.06?2:r<=.1?1:0};
+// rhyme: the last two vowels of a's final line match those of b's first line (Spanish assonance)
+const vow=s=>{const w=(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').match(/[a-zñ]+/g);return w?w[w.length-1].replace(/[^aeiou]/g,'').slice(-2):''};
+const rhymes=(a,b)=>!!(a.lines.length&&b.lines.length&&vow(a.lines[a.lines.length-1].x).length===2&&vow(a.lines[a.lines.length-1].x)===vow(b.lines[0].x));
+// every song plays whole: b starts from 0 at `at`, its intro under a's ending. The blend lasts 8 bars when key and tempo
+// fit, 4 when one of them does, 1 bar otherwise, and b's voice never starts while a is still singing.
+function planPair(a,b){const kf=keyFit(a.cam,b.cam),bf=bpmFit(a.bpm,b.bpm),beat=60/(a.bpm||100),bars=kf>=2&&bf>=2?8:kf>=2||bf>=2?4:1,
+ bVoice=b.lines.length?b.lines[0].t:8,aEnd=a.dur||0,why=[];
+ if(kf>=2)why.push('tonalidades compatibles ('+a.cam+' → '+b.cam+')');else if(a.cam&&b.cam)why.push('tonalidades lejanas ('+a.cam+' → '+b.cam+')');
+ if(bf>=2)why.push('ritmo parecido ('+a.bpm+' / '+b.bpm+' BPM)');else if(a.bpm&&b.bpm)why.push('ritmos distintos ('+a.bpm+' / '+b.bpm+' BPM)');
+ if(rhymes(a,b))why.push('la última frase rima con la primera de la siguiente');
+ let len=Math.min(16,bars*4*beat);
+ if(!aEnd)return{at:-len-1,bStart:0,len,style:'suave',why:why.join(' · ')||'fundido'};
  const sw=sharedWord(a,b);
- if(sw){const nx=a.lines[a.lines.indexOf(sw.la)+1],laEnd=Math.min(aEnd,nx?nx.t:sw.la.t+3),at=laEnd-sw.lb.t+.3; // b sings the word right after a does
-  if(at>aEnd*.6&&at<aEnd-1)return{at,bStart:0,len:Math.min(6,Math.max(1.5,sw.lb.t)),style:'suave',why:'puente de palabra: «'+sw.w+'» suena al final de una y al empezar la otra'}}
- const last=a.lines[a.lines.length-1],aVoiceEnd=last?Math.min(aEnd,last.t+4):aEnd-ov,room=aEnd-aVoiceEnd;
- if(room>=3){const len=Math.min(ov,room);return{at:aEnd-len,bStart:0,len,style:'suave',why:'el final instrumental de una se funde con la intro de la otra ('+Math.round(len)+' s)'}}
- return{at:Math.max(aVoiceEnd,aEnd-2),bStart:0,len:.6,style:'corte',why:'corte limpio justo al acabar la última frase'}}
+ if(sw&&(kf||bf)){const nx=a.lines[a.lines.indexOf(sw.la)+1],laEnd=Math.min(aEnd,nx?nx.t:sw.la.t+3),at=laEnd-sw.lb.t+.3; // b sings the word right after a
+  if(at>aEnd*.6&&at<aEnd-1)return{at,bStart:0,len:Math.min(len,Math.max(1.5,sw.lb.t)),style:'suave',why:['puente de palabra «'+sw.w+'»',...why].join(' · ')}}
+ const last=a.lines[a.lines.length-1],aVoiceEnd=last?Math.min(aEnd,last.t+4):aEnd-len;
+ let at=Math.max(aVoiceEnd-bVoice,aEnd-len,aEnd*.5);if(at>aEnd-1.2)at=aEnd-1.2;len=Math.max(1.2,aEnd-at);
+ why.push(bars===8?'mezcla larga de 8 compases':bars===4?'mezcla de 4 compases':'transición corta al acabar la frase');
+ return{at,bStart:0,len,style:'suave',why:why.join(' · ')}}
 // greedy order: after each song, the candidate with the closest BPM, with a bonus for a shared word
 async function buildSet(list,n,pre){const order=[...pre],rest=list.filter(t=>!order.includes(t));if(!order.length&&rest.length)order.push(rest.shift());
  while(order.length<n&&rest.length){const la=await analyze(order[order.length-1]);let best=rest[0],bs=-1;
-  for(const t of rest.slice(0,12)){const b=await analyze(t),s=(la.bpm&&b.bpm?Math.max(0,20-Math.abs(la.bpm-b.bpm)):5)+(sharedWord(la,b)?15:0);if(s>bs){bs=s;best=t}}
+  for(const t of rest.slice(0,20)){const b=await analyze(t),s=keyFit(la.cam,b.cam)*10+bpmFit(la.bpm,b.bpm)*8+(sharedWord(la,b)?6:0)+(rhymes(la,b)?4:0);if(s>bs){bs=s;best=t}}
   order.push(best);rest.splice(rest.indexOf(best),1)}
  const plans=[];for(let i=0;i<order.length-1;i++)plans.push(planPair(await analyze(order[i]),await analyze(order[i+1])));return{tracks:order,plans}}
 async function makeSet(){const crate=djCrate||(ctx.length?ctx:allTracks()),pre=decks.map(d=>d.t).filter(Boolean);const box=$('#setBox');
@@ -477,14 +492,21 @@ const setPlan=()=>djSet&&!djMode&&ctx.length===djSet.tracks.length&&ctx[idx]===c
 async function playSet(i,preview){if(!djSet)return;if(djMode){djMode=false;clearInterval(djAutoT);$('#ytwrap').classList.remove('dj')}shuffle=false;repeat=0;
  playFrom(djSet.tracks,i);if(!preview)return renderBar();const d=D();for(let k=0;k<50&&!dPlaying(d);k++)await new Promise(r=>setTimeout(r,150));
  const p=djSet.plans[i],du=dDur(d);seek(Math.max(0,(p.at<0?du+p.at:Math.min(p.at,du-1))-12));renderBar()}
-const setHtml=()=>djSet?`<div class="tools"><button class="pri" data-dk="playset">▶ Reproducir el set completo</button></div>`+djSet.plans.map((p,i)=>`<div class="trans">${tcover(djSet.tracks[i])}<div class="tt"><b>${i+1}. ${esc(djSet.tracks[i].title)} → ${esc(djSet.tracks[i+1].title)}</b><small>${esc(p.why)}</small></div><button data-dk="pv" data-pv="${i}">▶ Escuchar</button></div>`).join(''):'';
+const setHtml=()=>djSet?`<div class="tools"><button class="pri" data-dk="playset">▶ Reproducir el set completo</button></div>`+djSet.plans.map((p,i)=>`<div class="trans">${tcover(djSet.tracks[i])}<div class="tt"><b>${i+1}. ${esc(djSet.tracks[i].title)} → ${esc(djSet.tracks[i+1].title)}</b><small>${esc(p.why)}</small></div><span><button data-dk="pv" data-pv="${i}">▶ Escuchar</button><button data-dk="fm" data-pv="${i}" title="Buscar en YouTube una mezcla ya hecha de estas dos">🔎 Mezcla hecha</button></span></div><div id="mix${i}" class="mixres"></div>`).join(''):'';
+// look for a mashup/transition other DJs already made of these two songs (one YouTube search, ~100 of the 10,000 free daily units)
+async function findMix(i){const a=djSet.tracks[i],b=djSet.tracks[i+1],box=$('#mix'+i);if(!ytKey)return settings();box.textContent='Buscando una mezcla ya hecha…';
+ const tw=t=>norm(t.title.replace(/\s*[(\[].*?[)\]]/g,'').replace(/ - .*$/,'')).split(/\s+/).filter(w=>w.length>2),has=(s,t)=>tw(t).some(w=>s.includes(w));
+ const r=(await ytSearch(a.title+' '+b.title+' mashup transition',8)).filter(x=>{const s=norm(x.artist+' '+x.title);return has(s,a)&&has(s,b)});
+ djSet.mixes=djSet.mixes||{};djSet.mixes[i]=r[0]||null;
+ box.innerHTML=r[0]?`<button data-dk="pm" data-pv="${i}">▶ Mezcla encontrada: ${esc(key(r[0]))}</button>`:'No hay ninguna mezcla hecha de estas dos en YouTube.'}
 setInterval(()=>decks.forEach(d=>{if(d.loop&&d.t&&dPlaying(d)&&dPos(d)>=d.loop.e)dSeek(d,d.loop.s)}),100);
 
 // ---- one click handler for everything with data-*
 document.addEventListener('click',async e=>{
  const dk=e.target.closest('[data-dk],[data-load]');if(dk&&view.v==='dj'){const box=dk.closest('.deck'),d=box&&decks[+box.dataset.deck];
   if(dk.dataset.load!==undefined)return djLoad(+dk.dataset.load,djList[+dk.dataset.ci]);if(dk.dataset.dk==='auto')return djAuto();
-  const k=dk.dataset.dk;if(k==='mkset')return makeSet();if(k==='playset')return playSet(0);if(k==='pv')return playSet(+dk.dataset.pv,true);
+  const k=dk.dataset.dk;if(k==='mkset')return makeSet();if(k==='playset')return playSet(0);if(k==='pv')return playSet(+dk.dataset.pv,true);if(k==='fm')return findMix(+dk.dataset.pv);
+  if(k==='pm'){const m=djSet&&djSet.mixes&&djSet.mixes[+dk.dataset.pv];if(m){if(djMode)exitDj();shuffle=false;load(m)}return}
   if(d&&d.t){if(k==='play')dPlaying(d)?dPause(d):dPlay(d);else if(k==='cue')dSeek(d,d.cue||0);
    else if(k==='setcue'){d.cue=dPos(d);notice('Cue del plato '+'AB'[d.i]+' en '+fmt(d.cue))}
    else if(k==='loop'){d.loop=d.loop?null:{s:dPos(d),e:dPos(d)+8*60/(d.bpm||100)};renderDj()}}return}
