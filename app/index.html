@@ -412,7 +412,7 @@ setInterval(()=>{if(!lyrOn)return;if(cur!==lyrFor)return showLyrics();if(!lyrLin
  const el=$(`#lyrL [data-li="${Math.max(i,0)}"]`);if(el)el.scrollIntoView({block:'center',behavior:'smooth'})},250);
 
 // ---- DJ mode: you are the DJ. Two decks (A/B) with play, cue, position, volume and speed, a crossfader, and a crate to load songs from.
-let djMode=false,djX=0.5,djCrate=null,djAutoT=null,djList=[],djCurve='suave';const djGain=[1,1];
+let djMode=false,djX=0.5,djCrate=null,djAutoT=null,djList=[],djCurve='suave',deckMix=null,mixMsg='';const djGain=[1,1];
 const dPause=d=>{d.a.pause();if(d.ready&&d.isYT)d.yt.pauseVideo()},dPlay=d=>d.isYT?d.ready&&d.yt.playVideo():d.a.play().catch(()=>{});
 const dSeek=(d,s)=>d.isYT?d.ready&&d.yt.seekTo(s,true):(d.a.currentTime=s),dRate=(d,r)=>{d.a.playbackRate=r;if(d.ready)d.yt.setPlaybackRate(r)};
 // equal-power crossfader: both decks at ~70% in the middle, so the mix doesn't dip in volume
@@ -420,7 +420,7 @@ function djApply(){const g=(curves[djCurve]||curves.suave)(djX);decks.forEach(d=
  const main=djX<.5?0:1;if(A!==main&&decks[main].t){A=main;cur=decks[main].t;renderBar()}}
 function enterDj(crate){djMode=true;mixing=false;clearInterval(fadeT);if(crate)djCrate=crate;djX=A?1:0;djApply();$('#ytwrap').classList.add('dj')}
 // leaving the DJ view: the deck the crossfader favours keeps playing as the normal player, the other one stops
-function exitDj(){djMode=false;clearInterval(djAutoT);$('#ytwrap').classList.remove('dj');const keep=decks[A],other=decks[1-A];if(other.t)dStop(other);dVol(keep,V());cur=keep.t||cur;showYT()}
+function exitDj(){djMode=false;stopMix();djGain[0]=djGain[1]=1;$('#ytwrap').classList.remove('dj');const keep=decks[A],other=decks[1-A];if(other.t)dStop(other);dVol(keep,V());cur=keep.t||cur;showYT()}
 async function djLoad(i,t){const d=decks[i];if(!t)return;if(!djMode)enterDj();d.loop=null;d.cue=0;d.bpm=0;d.cam='';d.cues=[];analyze(t).then(a=>{if(d.t===t){d.bpm=a.bpm;d.cam=a.cam;renderDj()}});notice('Cargando en el plato '+'AB'[i]+'…');const ok=await dStart(d,t,0);if(!ok)return renderDj();
  for(let k=0;k<20&&!dPlaying(d);k++)await new Promise(r=>setTimeout(r,150)); // wait until it really starts, then park it at the beginning
  dPause(d);dSeek(d,0);if(d.rate)dRate(d,d.rate);if(!cur||!decks[A].t){A=i;cur=t}djApply();showYT();$('#ytwrap').classList.add('dj');renderDj();renderBar()}
@@ -443,7 +443,7 @@ function djAct(d,k,n){if(!d||!d.t)return;
  else if(k==='hc'){d.cues=d.cues||[];if(d.cues[n]==null){d.cues[n]=dPos(d);notice('Punto '+(n+1)+' del plato '+'AB'[d.i]+' en '+fmt(d.cues[n]));renderDj()}else dSeek(d,d.cues[n])}
  else if(k==='hcclr'){d.cues=[];renderDj();notice('Puntos del plato '+'AB'[d.i]+' borrados')}}
 // moving the crossfader by hand cancels an automatic pass that is running
-function djMove(x){clearInterval(djAutoT);djX=Math.max(0,Math.min(1,+x.toFixed(2)));const s=$('#xfd');if(s)s.value=djX;djApply()}
+function djMove(x){stopMix();djX=Math.max(0,Math.min(1,+x.toFixed(2)));const s=$('#xfd');if(s)s.value=djX;djApply()}
 // keyboard, the usual DJ layout: left hand on plato A, right hand on plato B. Only in the DJ view and never while you are typing in a box.
 const djKeys={q:[0,'play'],a:[0,'cue'],s:[0,'setcue'],d:[0,'loop'],z:[0,'sync'],x:[0,'hcclr'],
  p:[1,'play'],l:[1,'cue'],k:[1,'setcue'],j:[1,'loop'],m:[1,'sync'],n:[1,'hcclr']};
@@ -481,6 +481,9 @@ function renderDj(){if(view.v!=='dj')return;$('#main').innerHTML=`<h1>🎧 Modo 
  ${djFitHtml()}
  <div class="tools" style="justify-content:center"><select id="xcv" title="Cómo suena la mezcla al cruzar el crossfader">${[['suave','Fundido suave'],['palabra','Entrada rápida'],['corte','Corte seco']].map(([v,n])=>`<option value="${v}"${v===djCurve?' selected':''}>${n}</option>`).join('')}</select><button class="pri" data-dk="auto">⇄ Pasar al otro plato en ${xf||6} s</button></div>
  <p style="color:var(--mu);text-align:center;font-size:13px;margin:4px 0 0">Teclado · Plato A: <b>Q</b> play · <b>A</b> cue · <b>S</b> marcar cue · <b>D</b> bucle · <b>Z</b> sync · <b>1-4</b> puntos · <b>X</b> borrarlos<br>Plato B: <b>P</b> play · <b>L</b> cue · <b>K</b> marcar cue · <b>J</b> bucle · <b>M</b> sync · <b>7-0</b> puntos · <b>N</b> borrarlos<br>Mezcla: <b>←</b> <b>→</b> mover el crossfader · <b>Inicio</b> todo a A · <b>Fin</b> todo a B · <b>Espacio</b> pasar al otro plato</p>
+ <h2>✨ Mézclalas por mí</h2><p style="color:var(--mu)">Elige dos canciones abajo (<b>→ A</b> y <b>→ B</b>) y Onda hace la mezcla sola: iguala el ritmo, espera al momento bueno de la primera y juega con el volumen —un bajón de la que suena justo antes de que entre la otra y las dos arriba al entrar— para que el cambio enganche. También puede mirar si alguien ya publicó esa mezcla.</p>
+ <div class="tools" style="justify-content:center"><button class="pri" data-dk="automix">✨ Mezcla las dos</button><button data-dk="findab" title="Buscar en YouTube una mezcla ya hecha de estas dos canciones">🔎 ¿Existe ya esa mezcla?</button></div>
+ <div id="mixAB" class="mixres">${mixMsg}</div>
  <h2>🎛️ Set DJ automático</h2><p style="color:var(--mu)">Onda ordena las canciones como un DJ: tonalidades compatibles (rueda Camelot), ritmo parecido (contando medio y doble tiempo), rimas y palabras que se repiten. Cada transición dura 8, 4 o 1 compás según lo bien que encajen, la intro de la siguiente entra bajo el final de la anterior y nunca se pisan dos voces ni hay silencio. Si tienes canciones en los platos A y B, esa será la primera transición. Las canciones suenan enteras.</p>
  <div class="tools"><button data-dk="mkset">${djSet?'↻ Crear otro set':'Crear set con 5 transiciones'}</button><input id="setname" placeholder="Nombre del set" style="max-width:190px"><button data-dk="saveset" title="Guardar este set para otro día">💾 Guardar set</button></div><div id="setBox">${setHtml()}</div>
  <div id="savedBox">${savedHtml()}</div>
@@ -558,11 +561,40 @@ function loadSet(i){const s=djSaved[i];if(!s)return;djSet={tracks:s.tracks,plans
 function dropSet(i){const s=djSaved[i];if(!s)return;djSaved.splice(i,1);store.set('ondaSets',djSaved);renderDj();notice('Set «'+s.n+'» borrado')}
 const savedHtml=()=>djSaved.length?`<h2>Tus sets guardados</h2>${djSaved.map((s,i)=>`<div class="crate"><div class="tt"><b>${esc(s.n)}</b><small>${s.tracks.length} canciones · ${esc(s.tracks.map(t=>t.title).join(' → '))}</small></div><button data-dk="loadset" data-si="${i}" title="Volver a cargar este set">Cargar</button><button data-dk="dropset" data-si="${i}" title="Borrar este set">✕</button></div>`).join('')}`:'';
 // look for a mashup/transition other DJs already made of these two songs (one YouTube search, ~100 of the 10,000 free daily units)
-async function findMix(i){const a=djSet.tracks[i],b=djSet.tracks[i+1],box=$('#mix'+i);if(!ytKey)return settings();box.textContent='Buscando una mezcla ya hecha…';
- const tw=t=>norm(t.title.replace(/\s*[(\[].*?[)\]]/g,'').replace(/ - .*$/,'')).split(/\s+/).filter(w=>w.length>2),has=(s,t)=>tw(t).some(w=>s.includes(w));
- const r=(await ytSearch(a.title+' '+b.title+' mashup transition',8)).filter(x=>{const s=norm(x.artist+' '+x.title);return has(s,a)&&has(s,b)});
- djSet.mixes=djSet.mixes||{};djSet.mixes[i]=r[0]||null;
- box.innerHTML=r[0]?`<button data-dk="pm" data-pv="${i}">▶ Mezcla encontrada: ${esc(key(r[0]))}</button>`:'No hay ninguna mezcla hecha de estas dos en YouTube.'}
+async function findMixOf(a,b){const tw=t=>norm(t.title.replace(/\s*[(\[].*?[)\]]/g,'').replace(/ - .*$/,'')).split(/\s+/).filter(w=>w.length>2),has=(s,t)=>tw(t).some(w=>s.includes(w));
+ return (await ytSearch(a.title+' '+b.title+' mashup transition',8)).filter(x=>{const s=norm(x.artist+' '+x.title);return has(s,a)&&has(s,b)})[0]||null}
+async function findMix(i){const box=$('#mix'+i);if(!ytKey)return settings();box.textContent='Buscando una mezcla ya hecha…';
+ const m=await findMixOf(djSet.tracks[i],djSet.tracks[i+1]);djSet.mixes=djSet.mixes||{};djSet.mixes[i]=m;
+ box.innerHTML=m?`<button data-dk="pm" data-pv="${i}">▶ Mezcla encontrada: ${esc(key(m))}</button>`:'No hay ninguna mezcla hecha de estas dos en YouTube.'}
+// the same search for the two songs on the decks. The message is kept in a variable because the decks re-render
+// on their own when the BPM arrives, and that would wipe anything written straight into the box.
+const setMixMsg=h=>{mixMsg=h;const b=$('#mixAB');if(b)b.innerHTML=h};
+async function findDeckMix(){const a=decks[0].t,b=decks[1].t;if(!a||!b)return notice('Carga una canción en cada plato');if(!ytKey)return settings();
+ setMixMsg('Buscando una mezcla ya hecha…');deckMix=await findMixOf(a,b);
+ setMixMsg(deckMix?`<button data-dk="pmab">▶ Mezcla ya hecha: ${esc(key(deckMix))}</button>`:'Nadie ha publicado una mezcla de estas dos. La hago yo: pulsa «Mezcla las dos».')}
+// Onda mixes the two decks by itself: it matches the tempo, waits for the moment the plan picks, and plays with the volume
+// (plato A ducks for a couple of beats just before B comes in, then both go up) so the change hits instead of just fading.
+let mixT=null,mixWait=null;
+const stopMix=()=>{clearInterval(mixT);clearInterval(mixWait);clearInterval(djAutoT)};
+async function autoMix(){const a=decks[0],b=decks[1];if(!a.t||!b.t)return notice('Carga una canción en cada plato');
+ stopMix();setMixMsg('Preparando la mezcla…');
+ const ia=await analyze(a.t),ib=await analyze(b.t);
+ a.bpm=a.bpm||ia.bpm;a.cam=a.cam||ia.cam;b.bpm=b.bpm||ib.bpm;b.cam=b.cam||ib.cam;
+ if(a.bpm&&b.bpm)djSync(b);
+ const p=planPair(ia,ib),du=dDur(a)||ia.dur||0;
+ let at=p.at<0?du+p.at:Math.min(p.at,du-1.2);if(!(at>0))at=Math.max(1,du-8);
+ const len=Math.max(3,Math.min(p.len,12));
+ djGain[0]=1;djGain[1]=1;djX=0;djApply();dSeek(b,0);dPause(b);
+ dSeek(a,Math.max(0,at-8));dPlay(a); // start a few seconds before, so you hear the run-up and the drop
+ renderDj();setMixMsg('Mezclando: '+esc(p.why));
+ let k=0;mixWait=setInterval(()=>{if(++k>1200)return clearInterval(mixWait); // give up after a minute if the deck never starts
+  if(!dPlaying(a)||dPos(a)<at-.05)return;clearInterval(mixWait);runMix(a,b,len)})}
+function runMix(a,b,len){dPlay(b);const t0=Date.now(),beat=Math.min(len/4,120/((a.bpm||100)*(a.rate||1))),drop=.55;clearInterval(mixT);
+ mixT=setInterval(()=>{const f=Math.min(1,(Date.now()-t0)/1000/len),dip=Math.max(0,1-Math.abs(f-drop)*len/beat);
+  djGain[0]=1-.55*dip;djGain[1]=f<drop?.85:1;
+  djX=f<drop?f/drop*.3:.3+(f-drop)/(1-drop)*.7; // B waits under A, then the crossfader sweeps across on the drop
+  const s=$('#xfd');if(s)s.value=djX;djApply();
+  if(f>=1){clearInterval(mixT);djX=1;djGain[0]=1;djApply();dPause(a);renderDj();notice('Mezcla hecha')}},50)}
 setInterval(()=>decks.forEach(d=>{if(d.loop&&d.t&&dPlaying(d)&&dPos(d)>=d.loop.e)dSeek(d,d.loop.s)}),100);
 
 // ---- one click handler for everything with data-*
@@ -570,6 +602,8 @@ document.addEventListener('click',async e=>{
  const dk=e.target.closest('[data-dk],[data-load]');if(dk&&view.v==='dj'){const box=dk.closest('.deck'),d=box&&decks[+box.dataset.deck];
   if(dk.dataset.load!==undefined)return djLoad(+dk.dataset.load,djList[+dk.dataset.ci]);if(dk.dataset.dk==='auto')return djAuto();
   const k=dk.dataset.dk;if(k==='mkset')return makeSet();if(k==='saveset')return saveSet();if(k==='loadset')return loadSet(+dk.dataset.si);if(k==='dropset')return dropSet(+dk.dataset.si);if(k==='playset')return playSet(0);if(k==='pv')return playSet(+dk.dataset.pv,true);if(k==='fm')return findMix(+dk.dataset.pv);
+  if(k==='automix')return autoMix();if(k==='findab')return findDeckMix();
+  if(k==='pmab'){if(deckMix){if(djMode)exitDj();shuffle=false;load(deckMix)}return}
   if(k==='pm'){const m=djSet&&djSet.mixes&&djSet.mixes[+dk.dataset.pv];if(m){if(djMode)exitDj();shuffle=false;load(m)}return}
   if(d)djAct(d,k,+dk.dataset.hc);return}
  const el=e.target.closest('[data-go],[data-play],[data-a],[data-pl],[data-art],[data-mix],[data-qrm],[data-alb],[data-artid],.tr');if(!el||e.target.closest('dialog'))return;
