@@ -575,7 +575,8 @@ async function findDeckMix(){const a=decks[0].t,b=decks[1].t;if(!a||!b)return no
 // Onda mixes the two decks by itself: it matches the tempo, waits for the moment the plan picks, and plays with the volume
 // (plato A ducks for a couple of beats just before B comes in, then both go up) so the change hits instead of just fading.
 let mixT=null,mixWait=null;
-const stopMix=()=>{clearInterval(mixT);clearInterval(mixWait);clearInterval(djAutoT)};
+// the gains go back to 1 here: cutting a mix in the middle of the dip used to leave plato A at half volume for good
+const stopMix=()=>{clearInterval(mixT);clearInterval(mixWait);clearInterval(djAutoT);djGain[0]=djGain[1]=1};
 async function autoMix(){const a=decks[0],b=decks[1];if(!a.t||!b.t)return notice('Carga una canción en cada plato');
  stopMix();setMixMsg('Preparando la mezcla…');
  const ia=await analyze(a.t),ib=await analyze(b.t);
@@ -587,8 +588,12 @@ async function autoMix(){const a=decks[0],b=decks[1];if(!a.t||!b.t)return notice
  djGain[0]=1;djGain[1]=1;djX=0;djApply();dSeek(b,0);dPause(b);
  dSeek(a,Math.max(0,at-8));dPlay(a); // start a few seconds before, so you hear the run-up and the drop
  renderDj();setMixMsg('Mezclando: '+esc(p.why));
- let k=0;mixWait=setInterval(()=>{if(++k>1200)return clearInterval(mixWait); // give up after a minute if the deck never starts
-  if(!dPlaying(a)||dPos(a)<at-.05)return;clearInterval(mixWait);runMix(a,b,len)})}
+ // b is started first and the fade only begins once it is really sounding: on YouTube the play command takes a moment to
+ // buffer, and opening the crossfader before that put a hole right on the drop. 50 ms a tick, so 1200 is the minute it says.
+ let k=0,bOn=0;mixWait=setInterval(()=>{if(++k>1200)return clearInterval(mixWait); // give up after a minute if the deck never starts
+  if(!bOn){if(!dPlaying(a)||dPos(a)<at-.05)return;bOn=k;dPlay(b);return}
+  if(!dPlaying(b)&&k-bOn<40)return; // wait up to 2 s for b; after that go anyway rather than hang
+  clearInterval(mixWait);runMix(a,b,len)},50)}
 function runMix(a,b,len){dPlay(b);const t0=Date.now(),beat=Math.min(len/4,120/((a.bpm||100)*(a.rate||1))),drop=.55;clearInterval(mixT);
  mixT=setInterval(()=>{const f=Math.min(1,(Date.now()-t0)/1000/len),dip=Math.max(0,1-Math.abs(f-drop)*len/beat);
   djGain[0]=1-.55*dip;djGain[1]=f<drop?.85:1;
